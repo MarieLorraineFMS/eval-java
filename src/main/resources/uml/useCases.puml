@@ -1,0 +1,77 @@
+@startuml Use Cases
+title MYSDF Formations - Diagramme de cas d'utilisation
+left to right direction
+
+actor "Visiteur" as Visitor
+actor "Utilisateur" as User
+
+rectangle "Plateforme MYSDF Formations" {
+
+  ' === Browse trainings catalog ===
+  usecase "Consulter toutes\nles formations" as UC_ListAll
+  usecase "Rechercher des formations\npar mot-clé" as UC_SearchKeyword
+  usecase "Filtrer les formations\nPrésentiel / Distanciel" as UC_FilterMode
+
+  ' === Account / Auth ===
+  usecase "S'authentifier" as UC_Login
+  usecase "Créer un compte" as UC_Register
+  usecase "Se déconnecter" as UC_Logout
+
+  ' === Cart / command ===
+  usecase "Consulter le panier" as UC_ViewCart
+  usecase "Ajouter une formation\nau panier" as UC_AddToCart
+  usecase "Retirer une formation\ndu panier" as UC_RemoveFromCart
+  usecase "Passer / Valider\nla commande" as UC_Checkout
+  usecase "Renseigner le client\n(nom, prénom, email,\nadresse, tel)" as UC_EnterClient
+}
+
+' === Inheritance ===
+User --|> Visitor
+
+' === Visitor ===
+Visitor --> UC_ListAll
+Visitor --> UC_SearchKeyword
+Visitor --> UC_FilterMode
+Visitor --> UC_Login
+Visitor --> UC_Register
+
+' === User ===
+User --> UC_Logout
+User --> UC_ViewCart
+User --> UC_AddToCart
+User --> UC_RemoveFromCart
+User --> UC_Checkout
+
+' === Auth required for cart/command ===
+UC_ViewCart --> UC_Login : <<include>>
+UC_AddToCart --> UC_Login : <<include>>
+UC_RemoveFromCart --> UC_Login : <<include>>
+UC_Checkout --> UC_Login : <<include>>
+
+' === Checkout involves client selection ===
+UC_Checkout --> UC_EnterClient : <<include>>
+
+' === Account creation ===
+UC_Register ..> UC_Login : <<extend>>
+note on link
+Condition : l'utilisateur n'a pas de compte
+end note
+
+' === Preconditions ===
+note right of UC_RemoveFromCart
+Pré-condition :
+Le panier contient au moins une formation
+end note
+
+note right of UC_Checkout
+Pré-condition :
+Le panier n'est pas vide
+end note
+
+note right of UC_EnterClient
+Chaque commande est associée à 1 client.
+Un même utilisateur peut faire
+plusieurs commandes pour des clients différents.
+end note
+
+@enduml

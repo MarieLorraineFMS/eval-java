@@ -1,0 +1,93 @@
+@startuml Class Diagram
+title Plateforme MYSDF Formations - Diagramme de classes
+skinparam classAttributeIconSize 0
+
+' ====== Enums ======
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+' ====== Entities ======
+class Training {
+  +id: int
+  +name: String
+  +description: String
+  +durationDays: int
+  +price: BigDecimal
+}
+
+class UserAccount {
+  +id: int
+  +login: String
+  +passwordHash: String
+}
+
+class Client {
+  +id: int
+  +firstName: String
+  +lastName: String
+  +email: String
+  +address: String
+  +phone: String
+}
+
+class Cart {
+  +id: int
+  +createdAt: DateTime
+}
+
+class CartItem {
+  +id: int
+  +quantity: int
+  +unitPrice: BigDecimal
+}
+
+class Order {
+  +id: int
+  +createdAt: DateTime
+  +status: OrderStatus
+  +total: BigDecimal
+}
+
+class OrderLine {
+  +id: int
+  +quantity: int
+  +unitPrice: BigDecimal
+}
+
+' ====== Associations ======
+' A logged-in user can have an active cart
+UserAccount "1" o-- "0..1" Cart : owns
+
+Cart "1" o-- "0..*" CartItem : contains
+CartItem "*" --> "1" Training : training
+
+' Orders : a user can place many orders
+UserAccount "1" --> "0..*" Order : places
+
+' Each order is for one client
+Order "1" --> "1" Client : for
+
+Order "1" o-- "1..*" OrderLine : lines
+OrderLine "*" --> "1" Training : training
+
+' ====== Notes ======
+note right of UserAccount
+Création utilisateur :
+login + password.
+end note
+
+note right of Order
+Une commande est associée à 1 client.
+Un utilisateur peut faire plusieurs commandes
+pour des clients différents.
+end note
+
+note bottom of Cart
+Panier : ajout/retrait de formations.
+Passage en commande possible quand connecté.
+end note
+
+@enduml
