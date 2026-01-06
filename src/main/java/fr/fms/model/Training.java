@@ -1,4 +1,3 @@
-// src/main/java/fr/fms/model/Training.java
 package fr.fms.model;
 
 import java.math.BigDecimal;
@@ -11,5 +10,41 @@ public class Training {
     private BigDecimal price;
     private boolean onsite;
 
-    // TODO getters/setters/constructors
+    public Training(int id, String name, String description, int durationDays, BigDecimal price, boolean onsite) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.durationDays = durationDays;
+        this.price = price;
+        this.onsite = onsite;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public int getDurationDays() {
+        return durationDays;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public boolean isOnsite() {
+        return onsite;
+    }
+
+    @Override
+    public String toString() {
+        return id + " | " + name + " | " + description + " | " + durationDays + " | " + price + " | " + onsite;
+    }
 }

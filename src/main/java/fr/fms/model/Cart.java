@@ -1,4 +1,3 @@
-// src/main/java/fr/fms/model/Cart.java
 package fr.fms.model;
 
 import java.time.LocalDateTime;
@@ -11,5 +10,30 @@ public class Cart {
     private LocalDateTime createdAt;
     private List<CartItem> items = new ArrayList<>();
 
-    // getters/setters/constructors
+    public Cart(int id, int userId, LocalDateTime createdAt) {
+        this.id = id;
+        this.userId = userId;
+        this.createdAt = createdAt;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public List<CartItem> getItems() {
+        return items;
+    }
+
+    @Override
+    public String toString() {
+        return id + " | " + userId + " | " + createdAt + " | " + items;
+    }
 }
