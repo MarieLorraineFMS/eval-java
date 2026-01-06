@@ -1,0 +1,90 @@
+@startuml Order Sequence Diagram
+title Valider la commande - Diagramme de séquence
+autonumber
+hide footbox
+
+actor "Utilisateur" as User
+
+boundary "UI\n(Console/Web)" as UI
+control "AuthService" as AuthSvc
+control "CartService" as CartSVC
+control "OrderService" as OrderSvc
+entity "UserAccount" as User
+entity "Client" as Client
+entity "Order" as Order
+database "DB" as DB
+
+== Déclenchement ==
+User -> UI : Clique "Valider la commande"
+UI -> CartSVC : getCurrentCart()
+
+alt Panier vide
+  CartSVC --> UI : cart.items = []
+  UI --> User : Message "Panier vide"\nImpossible de passer commande
+else Panier non vide
+  CartSVC --> UI : cart(items, total)
+
+  == Vérification connexion ==
+  UI -> AuthSvc : isAuthenticated()
+  alt Non connecté
+    AuthSvc --> UI : false
+
+    UI --> User : Demande : "Se connecter" ou "Créer un compte"
+    alt Création de compte
+      User -> UI : Saisie login + password
+      UI -> AuthSvc : register(login, password)
+      AuthSvc -> DB : INSERT UserAccount
+      DB --> AuthSvc : userId
+      AuthSvc --> UI : registered(userId)
+    else Se connecter
+      User -> UI : Saisie login + password
+      UI -> AuthSvc : login(login, password)
+      AuthSvc -> DB : SELECT UserAccount by login
+      DB --> AuthSvc : user(+passwordHash)
+      alt Identifiants invalides
+        AuthSvc --> UI : loginFailed
+        UI --> User : Message "Identifiants invalides"\nCommande annulée
+        return
+      else Identifiants OK
+        AuthSvc --> UI : authenticated(user)
+      end
+    end
+  else Déjà connecté
+    AuthSvc --> UI : true (user)
+  end
+
+  == Saisie / sélection du client ==
+  UI --> User : Saisir infos client\n(nom, prénom, email, adresse, tel)
+  User -> UI : Infos client
+  UI -> OrderSvc : upsertClient(clientData)
+  OrderSvc -> DB : SELECT Client by email
+  alt Client existe
+    DB --> OrderSvc : clientId
+    OrderSvc -> DB : UPDATE Client (si modifs)
+  else Nouveau client
+    DB --> OrderSvc : not found
+    OrderSvc -> DB : INSERT Client
+    DB --> OrderSvc : clientId
+  end
+  OrderSvc --> UI : client(clientId)
+
+  == Création de commande ==
+  UI -> OrderSvc : createOrder(userId, clientId, cartItems)
+  OrderSvc -> Order : new Order(status=CONFIRMED)
+  OrderSvc -> DB : INSERT Order (userId, clientId, status, total)
+  DB --> OrderSvc : orderId
+
+  loop Pour chaque formation du panier
+    OrderSvc -> DB : INSERT OrderLine(orderId, trainingId,\nqty=1, unitPrice)
+  end
+
+  == Finalisation ==
+  UI -> CartSVC : clearCart()
+  CartSVC -> DB : DELETE/UPDATE CartItems
+  DB --> CartSVC : ok
+  CartSVC --> UI : cartCleared
+
+  UI --> User : Confirmation\n"Commande validée ✅"\n+ récapitulatif (orderId, total)
+end
+
+@enduml
