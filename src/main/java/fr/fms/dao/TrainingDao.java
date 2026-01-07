@@ -1,16 +1,16 @@
 package fr.fms.dao;
 
-import fr.fms.model.Training;
-
 import java.util.List;
 import java.util.Optional;
 
+import fr.fms.model.Training;
+
 public interface TrainingDao {
-    List<Training> readAll();
+    List<Training> findAll();
 
-    List<Training> readByKeyword(String keyword);
+    Optional<Training> findById(int id);
 
-    Optional<Training> read(int trainingId);
+    List<Training> searchByKeyword(String keyword);
 
-    List<Training> readByOnsite(boolean onsite);
+    List<Training> findByOnsite(boolean onsite);
 }

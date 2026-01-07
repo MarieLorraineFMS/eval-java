@@ -1,14 +1,17 @@
-// src/main/java/fr/fms/dao/ClientDao.java
 package fr.fms.dao;
+
+import java.util.List;
+import java.util.Optional;
 
 import fr.fms.model.Client;
 
-import java.util.Optional;
-
 public interface ClientDao {
-    Optional<Client> readByEmail(String email);
+    List<Client> findAll();
+
+    Optional<Client> findById(int id);
+
+    Optional<Client> findByEmail(String email);
 
     int create(Client client);
 
-    void update(Client client);
 }
