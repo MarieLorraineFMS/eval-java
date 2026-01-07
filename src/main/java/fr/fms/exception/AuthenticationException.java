@@ -1,3 +1,4 @@
+
 package fr.fms.exception;
 
 public class AuthenticationException extends RuntimeException {
