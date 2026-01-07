@@ -10,9 +10,9 @@ DELETE FROM `order_line`;
 ALTER TABLE `order_line` AUTO_INCREMENT = 1;
 
 
-DELETE FROM `customer_order`;
+DELETE FROM `order`;
 
-ALTER TABLE `customer_order` AUTO_INCREMENT = 1;
+ALTER TABLE `order` AUTO_INCREMENT = 1;
 
 
 DELETE FROM `cart_item`;
@@ -1050,7 +1050,7 @@ VALUES (1, 1, 14, 3, 1003),
 
 
 INSERT INTO
-    `customer_order` (
+    `order` (
         `id`,
         `user_id`,
         `client_id`,

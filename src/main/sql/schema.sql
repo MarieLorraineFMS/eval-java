@@ -67,9 +67,9 @@ CREATE TABLE IF NOT EXISTS cart_item (
 CREATE INDEX idx_cart_item_cart ON cart_item (cart_id);
 
 -- /////////////////////////////////
--- CUSTOMER ORDER
+-- ORDER
 -- /////////////////////////////////
-CREATE TABLE IF NOT EXISTS customer_order (
+CREATE TABLE IF NOT EXISTS order (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     client_id INT NOT NULL,
@@ -84,9 +84,9 @@ CREATE TABLE IF NOT EXISTS customer_order (
     CONSTRAINT fk_order_client FOREIGN KEY (client_id) REFERENCES client (id)
 );
 
-CREATE INDEX idx_order_user ON customer_order (user_id);
+CREATE INDEX idx_order_user ON order (user_id);
 
-CREATE INDEX idx_order_client ON customer_order (client_id);
+CREATE INDEX idx_order_client ON order (client_id);
 
 -- /////////////////////////////////
 -- ORDER LINE
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS order_line (
     training_id INT NOT NULL,
     quantity INT NOT NULL DEFAULT 1,
     unit_price DECIMAL(10, 2) NOT NULL,
-    CONSTRAINT fk_order_line_order FOREIGN KEY (order_id) REFERENCES customer_order (id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_line_order FOREIGN KEY (order_id) REFERENCES order (id) ON DELETE CASCADE,
     CONSTRAINT fk_order_line_training FOREIGN KEY (training_id) REFERENCES training (id)
 );
 
