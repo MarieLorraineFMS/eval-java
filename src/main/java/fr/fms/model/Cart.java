@@ -91,7 +91,6 @@ public class Cart {
 
     @Override
     public String toString() {
-        // Avoid deep object graphs => prevent recursive toString / stack overflow
         int nbItems = items == null ? 0 : items.size();
         return "Cart{id=" + id
                 + ", userId=" + userId
