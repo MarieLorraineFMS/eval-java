@@ -4,17 +4,21 @@ import java.math.BigDecimal;
 
 public class CartItem {
     private int id;
-    private int cartId;
-    private int trainingId;
+    private final int cartId;
+    private final Training training;
     private int quantity;
-    private BigDecimal unitPrice;
+    private final BigDecimal unitPrice;
 
-    public CartItem(int id, int cartId, int trainingId, int quantity, BigDecimal unitPrice) {
+    public CartItem(int id, int cartId, Training training, int quantity, BigDecimal unitPrice) {
         this.id = id;
         this.cartId = cartId;
-        this.trainingId = trainingId;
+        this.training = training;
         this.quantity = quantity;
         this.unitPrice = unitPrice;
+    }
+
+    public CartItem(Training training, int quantity, BigDecimal unitPrice) {
+        this(0, 0, training, quantity, unitPrice);
     }
 
     public int getId() {
@@ -25,8 +29,8 @@ public class CartItem {
         return cartId;
     }
 
-    public int getTrainingId() {
-        return trainingId;
+    public Training getTraining() {
+        return training;
     }
 
     public int getQuantity() {
@@ -37,9 +41,19 @@ public class CartItem {
         return unitPrice;
     }
 
+    public void incrementQuantity(int delta) {
+        this.quantity += delta;
+    }
+
+    public BigDecimal getLineTotal() {
+        return unitPrice.multiply(BigDecimal.valueOf(quantity));
+    }
+
     @Override
     public String toString() {
-        return id + " | " + cartId + " | " + trainingId + " | " + quantity + " | " + unitPrice;
+        return "CartItem : id=" + id + ", cartId=" + cartId + ", training=" + training.getName() + ", quantity="
+                + quantity
+                + ", unitPrice=" + unitPrice;
     }
 
 }
