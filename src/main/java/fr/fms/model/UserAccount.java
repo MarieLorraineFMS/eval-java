@@ -1,9 +1,9 @@
 package fr.fms.model;
 
 public class UserAccount {
-    private int id;
-    private String login;
-    private String passwordHash;
+    private final int id;
+    private final String login;
+    private final String passwordHash;
 
     public UserAccount(int id, String login, String passwordHash) {
         this.id = id;
@@ -11,12 +11,12 @@ public class UserAccount {
         this.passwordHash = passwordHash;
     }
 
-    public String getPasswordHash() {
-        return passwordHash;
+    public UserAccount(String login, String passwordHash) {
+        this(0, login, passwordHash);
     }
 
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
+    public String getPasswordHash() {
+        return passwordHash;
     }
 
     public int getId() {

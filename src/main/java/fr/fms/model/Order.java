@@ -6,21 +6,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Order {
-    private int id;
-    private int userId;
-    private int clientId;
-    private LocalDateTime createdAt;
-    private OrderStatus status;
-    private BigDecimal total;
-    private List<OrderLine> lines = new ArrayList<>();
+    private final int id;
+    private final int userId;
+    private final Client client;
+    private final LocalDateTime createdAt;
+    private final OrderStatus status;
+    private final BigDecimal total;
+    private final List<OrderLine> lines = new ArrayList<>();
 
-    public Order(int id, int userId, int clientId, LocalDateTime createdAt, OrderStatus status, BigDecimal total) {
+    public Order(int id, int userId, Client client, LocalDateTime createdAt, OrderStatus status, BigDecimal total) {
         this.id = id;
         this.userId = userId;
-        this.clientId = clientId;
+        this.client = client;
         this.createdAt = createdAt;
         this.status = status;
         this.total = total;
+    }
+
+    public Order(int userId, Client client, LocalDateTime createdAt, OrderStatus status, BigDecimal total) {
+        this(0, userId, client, createdAt, status, total);
     }
 
     public int getId() {
@@ -31,8 +35,8 @@ public class Order {
         return userId;
     }
 
-    public int getClientId() {
-        return clientId;
+    public Client getClient() {
+        return client;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -43,13 +47,37 @@ public class Order {
         return status;
     }
 
+    public List<OrderLine> getLines() {
+        return new ArrayList<>(lines);
+    }
+
+    // Total from DB
     public BigDecimal getTotal() {
         return total;
     }
 
+    // Recompute total from lines
+    public BigDecimal computeTotalFromLines() {
+        return lines.stream()
+                .map(OrderLine::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // Building order lines for DAO/service
+    public void addLine(OrderLine line) {
+        // Basic guard to avoid null insert
+        if (line == null)
+            return; // or throw IllegalArgumentException
+        lines.add(line);
+    }
+
     @Override
     public String toString() {
-        return id + " | " + userId + " | " + clientId + " | " + createdAt + " | " + status + " | " + total + " | "
-                + lines;
+        return id + " | user=" + userId
+                + " | client=" + client.getId()
+                + " | " + status
+                // DB total
+                + " | total=" + total;
     }
+
 }

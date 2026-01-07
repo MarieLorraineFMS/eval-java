@@ -1,12 +1,12 @@
 package fr.fms.model;
 
 public class Client {
-    private int id;
-    private String firstName;
-    private String lastName;
-    private String email;
-    private String address;
-    private String phone;
+    private final int id;
+    private final String firstName;
+    private final String lastName;
+    private final String email;
+    private final String address;
+    private final String phone;
 
     public Client(int id, String firstName, String lastName, String email, String address, String phone) {
         this.id = id;
@@ -15,6 +15,10 @@ public class Client {
         this.email = email;
         this.address = address;
         this.phone = phone;
+    }
+
+    public Client(String firstName, String lastName, String email, String address, String phone) {
+        this(0, firstName, lastName, email, address, phone);
     }
 
     public int getId() {
