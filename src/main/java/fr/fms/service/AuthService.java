@@ -15,12 +15,12 @@ public class AuthService {
     }
 
     public UserAccount login(String login, String password) {
-        // Simple validation
+        // Validation
         if (isNullOrEmpty(login) || isNullOrEmpty(password)) {
             throw new AuthenticationException("Identifiant/mot de passe obligatoires.");
         }
 
-        String cleanLogin = login.trim();
+        String cleanLogin = login.trim().toLowerCase();
         String inputHash = PasswordHasher.sha256(password); // Hash input password
 
         return userDao.findByLogin(cleanLogin)
@@ -33,7 +33,7 @@ public class AuthService {
             throw new AuthenticationException("Identifiant/mot de passe obligatoires.");
         }
 
-        String cleanLogin = login.trim();
+        String cleanLogin = login.trim().toLowerCase();
 
         // Prevent duplicate login
         if (userDao.findByLogin(cleanLogin).isPresent()) {
