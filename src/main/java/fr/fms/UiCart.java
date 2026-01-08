@@ -26,7 +26,7 @@ public final class UiCart {
             Scanner sc,
             UserAccount currentUser) {
         if (currentUser == null) {
-            printlnColor(YELLOW, "Tu dois te connecter pour utiliser le panier.");
+            printlnColor(YELLOW, "Connexion nécessaire.");
             return;
         }
 
@@ -38,7 +38,7 @@ public final class UiCart {
             printCart(cart);
 
             if (cart.getItems().isEmpty()) {
-                // Empty cart => only display useful actions
+                // Empty cart => only useful actions
                 System.out.println("1) Ajouter une formation");
                 System.out.println("0) Retour");
                 spacer();
@@ -103,23 +103,22 @@ public final class UiCart {
         spacer();
     }
 
-    // CartItem line
+    // One cart line (no raw toString)
     private static String formatCartLine(CartItem i) {
         return i.getTraining().getId()
                 + " | " + i.getTraining().getName()
-                + " | Qté: " + i.getQuantity()
-                + " | PU: " + String.format("%.2f", i.getUnitPrice()) + "€"
-                + " | Total: " + String.format("%.2f", i.getLineTotal()) + "€";
+                + " | Qté : " + i.getQuantity()
+                + " | PU : " + String.format("%.2f", i.getUnitPrice()) + "€"
+                + " | Total : " + String.format("%.2f", i.getLineTotal()) + "€";
     }
 
-    // Add training
     private static void handleAddTraining(
             CartService cartService,
             TrainingService trainingService,
             Scanner sc,
             UserAccount currentUser) {
+        // Training selection flow
         Integer trainingId = UiTraining.pickTrainingId(trainingService, sc);
-
         if (trainingId == null)
             return;
 
@@ -128,7 +127,6 @@ public final class UiCart {
         printlnColor(GREEN, "Ajouté ✅");
     }
 
-    // Edit/remove training
     private static void handleEditOrRemoveItem(CartService cartService, Scanner sc, UserAccount currentUser) {
         Cart cart = cartService.getOrCreateCart(currentUser.getId());
 
@@ -151,25 +149,17 @@ public final class UiCart {
         spacer();
 
         if (qty <= 1) {
-            System.out.println("1) Supprimer la ligne");
-            System.out.println("0) Retour");
-            spacer();
-
-            System.out.print("Choix : ");
-            String c = sc.nextLine().trim();
-
-            if ("1".equals(c)) {
-                if (confirm(sc, "Supprimer cette formation du panier ?")) {
-                    cartService.removeTraining(currentUser.getId(), trainingId);
-                    printlnColor(GREEN, "Ligne supprimée ✅");
-                }
+            // Qty=1 => delete
+            if (confirm(sc, "Supprimer la formation ?")) {
+                cartService.removeTraining(currentUser.getId(), trainingId);
+                printlnColor(GREEN, "Formation supprimée ✅");
             }
             return;
         }
 
-        System.out.println("1) Enlever 1");
-        System.out.println("2) Enlever plusieurs");
-        System.out.println("3) Supprimer tout");
+        // Qty > 1
+        System.out.println("1) Modifier la quantité");
+        System.out.println("2) Supprimer la formation");
         System.out.println("0) Retour");
         spacer();
 
@@ -178,29 +168,47 @@ public final class UiCart {
 
         switch (c) {
             case "1" -> {
-                cartService.decrementTraining(currentUser.getId(), trainingId, 1);
-                printlnColor(GREEN, "Quantité mise à jour ✅");
-            }
-            case "2" -> {
-                int delta = askInt(sc, "Quantité à déduire ? ");
-                if (delta <= 0)
+                // Nbr to remove (0 => back)
+                Integer toRemove = askIdOrBack(sc, "Quantité à retirer ? (0 pour retour) : ");
+                if (toRemove == null)
                     return;
-                cartService.decrementTraining(currentUser.getId(), trainingId, delta);
+
+                if (toRemove <= 0) {
+                    printlnColor(YELLOW, "Rien retiré.");
+                    return;
+                }
+
+                if (toRemove > qty) {
+                    printlnColor(YELLOW, "Impossible de retirer plus de " + qty + ".");
+                    return;
+                }
+
+                // Delete line with confirmation
+                if (toRemove == qty) {
+                    if (!confirm(sc, "Supprimer la formation ?"))
+                        return;
+                    cartService.removeTraining(currentUser.getId(), trainingId);
+                    printlnColor(GREEN, "Formation supprimée ✅");
+                    return;
+                }
+
+                cartService.decrementTraining(currentUser.getId(), trainingId, toRemove);
                 printlnColor(GREEN, "Quantité mise à jour ✅");
             }
-            case "3" -> {
-                if (confirm(sc, "Supprimer complètement cette formation ?")) {
+
+            case "2" -> {
+                if (confirm(sc, "Supprimer la formation ?")) {
                     cartService.removeTraining(currentUser.getId(), trainingId);
                     printlnColor(GREEN, "Formation supprimée ✅");
                 }
             }
+
             default -> {
                 // do nothing
             }
         }
     }
 
-    // Confirm before clearing
     private static void handleClearCart(CartService cartService, Scanner sc, UserAccount currentUser) {
         if (!confirm(sc, "Vider le panier ?"))
             return;
@@ -208,7 +216,6 @@ public final class UiCart {
         printlnColor(GREEN, "Panier vidé ✅");
     }
 
-    // Checkout
     private static void handleCheckout(CartService cartService, OrderService orderService, Scanner sc,
             UserAccount currentUser) {
         Cart cart = cartService.getOrCreateCart(currentUser.getId());
@@ -229,28 +236,29 @@ public final class UiCart {
         printlnColor(YELLOW, "Le panier a été vidé.");
     }
 
-    // Select an item or auto-select if only 1
+    // Select an item or auto select if only 1
     private static CartItem selectCartItem(Scanner sc, Cart cart) {
         if (cart.getItems().size() == 1) {
             return cart.getItems().get(0);
         }
 
-        printlnColor(CYAN, "Choisis une formation :");
+        printlnColor(CYAN, "Choisir une formation :");
         cart.getItems().forEach(i -> System.out.println(formatCartLine(i)));
         spacer();
 
-        int id = askIdOrBack(sc, "Id formation (0 pour retour) : ");
+        Integer id = askIdOrBack(sc, "Id formation (0 pour retour) : ");
+        if (id == null)
+            return null;
 
         Optional<CartItem> item = cart.getItems().stream()
                 .filter(i -> i.getTraining().getId() == id)
                 .findFirst();
 
         if (item.isEmpty()) {
-            printlnColor(YELLOW, "Id non trouvé dans le panier.");
+            printlnColor(YELLOW, "Formation non trouvée.");
             return null;
         }
 
         return item.get();
     }
-
 }
