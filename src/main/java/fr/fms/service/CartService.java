@@ -1,6 +1,7 @@
 package fr.fms.service;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import fr.fms.dao.CartDao;
 import fr.fms.exception.CartEmptyException;
@@ -99,6 +100,18 @@ public class CartService {
                 .orElseThrow(
                         () -> new IllegalStateException("Une erreur est survenue lors de la récupération du panier."));
 
+    }
+
+    public List<Training> listTrainings() {
+        return trainingService.listAll();
+    }
+
+    public List<Training> searchTrainings(String keyword) {
+        return trainingService.searchByKeyword(keyword);
+    }
+
+    public List<Training> filterTrainings(boolean onsite) {
+        return trainingService.listByOnsite(onsite);
     }
 
     ////////////// HELPER //////////////////
