@@ -62,6 +62,8 @@ public class App {
         OrderService orderService = new OrderService(orderDao, clientDao, cartDao, cartService);
 
         AppLogger.setVerbose(DbConfig.isVerboseEnabled());
+        AppLogger.rocket("Application started");
+        AppLogger.info("Verbose mode enabled");
 
         ////////////// CLI /////////////////////////
 
@@ -189,6 +191,7 @@ public class App {
             case "6" -> {
                 currentUser = null;
                 uiWarn("Menu principal", "Déconnecté.");
+                AppLogger.info("User logged out: " + currentUser.getLogin());
             }
 
             default -> uiWarn("Menu principal", "Choix inconnu.");
