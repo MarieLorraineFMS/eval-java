@@ -7,6 +7,9 @@ import fr.fms.utils.PasswordHasher;
 
 import static fr.fms.utils.Helpers.isNullOrEmpty;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 /**
  * Authentication service.
  *
@@ -59,9 +62,14 @@ public class AuthService {
         String inputHash = PasswordHasher.sha256(password);
 
         return userDao.findByLogin(cleanLogin)
-                // Compare stored hash with input hash
-                .filter(u -> inputHash.equals(u.getPasswordHash()))
+                .filter(u -> {
+                    // Constant-time compare to reduce timing leaks
+                    byte[] a = inputHash.getBytes(StandardCharsets.UTF_8);
+                    byte[] b = u.getPasswordHash().getBytes(StandardCharsets.UTF_8);
+                    return MessageDigest.isEqual(a, b);
+                })
                 .orElseThrow(() -> new AuthenticationException("Identifiant ou mot de passe invalide."));
+
     }
 
     /**
