@@ -10,6 +10,7 @@ import fr.fms.config.DbConfig;
 import fr.fms.dao.ClientDao;
 import fr.fms.exception.DaoException;
 import fr.fms.model.Client;
+import fr.fms.utils.AppLogger;
 
 /**
  * JDBC implementation of {@link ClientDao}.
@@ -110,6 +111,7 @@ public class ClientDaoJdbc implements ClientDao {
                 """;
         try (var cnx = DbConfig.getConnection();
                 var ps = cnx.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            AppLogger.info("Create client for clientId=" + client.getId());
 
             ps.setString(1, client.getFirstName());
             ps.setString(2, client.getLastName());

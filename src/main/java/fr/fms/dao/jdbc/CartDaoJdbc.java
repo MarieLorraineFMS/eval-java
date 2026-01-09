@@ -14,6 +14,7 @@ import fr.fms.exception.DaoException;
 import fr.fms.model.Cart;
 import fr.fms.model.CartItem;
 import fr.fms.model.Training;
+import fr.fms.utils.AppLogger;
 
 /**
  * JDBC implementation of {@link CartDao}.
@@ -83,7 +84,7 @@ public class CartDaoJdbc implements CartDao {
         final String insert = "INSERT INTO cart(user_id) VALUES(?)";
 
         try (var cnx = DbConfig.getConnection()) {
-
+            AppLogger.info("Get or create cart for userId=" + userId);
             // Try find first
             Integer existing = selectCartId(cnx, select, userId);
             if (existing != null) {

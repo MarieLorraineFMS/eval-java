@@ -18,6 +18,7 @@ import fr.fms.model.Order;
 import fr.fms.model.OrderLine;
 import fr.fms.model.OrderStatus;
 import fr.fms.model.Training;
+import fr.fms.utils.AppLogger;
 
 /**
  * JDBC implementation of {@link OrderDao}.
@@ -49,7 +50,6 @@ public class OrderDaoJdbc implements OrderDao {
 
         try (var cnx = DbConfig.getConnection();
                 var ps = cnx.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
             ps.setInt(1, order.getUserId());
             ps.setInt(2, order.getClient().getId());
             ps.setTimestamp(3, Timestamp.valueOf(order.getCreatedAt()));
@@ -94,6 +94,8 @@ public class OrderDaoJdbc implements OrderDao {
                 """;
 
         try (var cnx = DbConfig.getConnection()) {
+            AppLogger.info("Create order with lines for orderId=" + order.getId());
+
             cnx.setAutoCommit(false);
 
             try {
