@@ -29,18 +29,18 @@ rectangle "Plateforme MYSDF Formations" {
 User --|> Visitor
 
 ' === Visiteur ===
-Visitor --> UC_ListAll
-Visitor --> UC_Search
-Visitor --> UC_Filter
-Visitor --> UC_Login
-Visitor --> UC_Register
+Visitor -- UC_ListAll
+Visitor -- UC_Search
+Visitor -- UC_Filter
+Visitor -- UC_Login
+Visitor -- UC_Register
 
 ' === Utilisateur connecté ===
-User --> UC_Logout
-User --> UC_ViewCart
-User --> UC_AddToCart
-User --> UC_RemoveFromCart
-User --> UC_Checkout
+User -- UC_Logout
+User -- UC_ViewCart
+User -- UC_AddToCart
+User -- UC_RemoveFromCart
+User -- UC_Checkout
 
 ' === Authentification requise ===
 UC_ViewCart --> UC_Login : <<include>>
@@ -52,7 +52,7 @@ UC_Checkout --> UC_Login : <<include>>
 UC_Checkout --> UC_EnterClient : <<include>>
 
 ' === Extension : création de compte ===
-UC_Register ..> UC_Login : <<extend>>
+UC_Login ..> UC_Register : <<extend>>
 note on link
 Condition :
 L'utilisateur ne possède pas encore de compte

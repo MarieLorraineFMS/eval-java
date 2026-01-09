@@ -81,8 +81,8 @@ CartItem "*" --> "1" Training : training
 ' Orders : a user can place many orders
 UserAccount "1" --> "0..*" Order : places
 
-' Each order is for one client
-Order "1" --> "1" Client : for
+' Each order is for exactly one client
+Client "1" <-- "0..*" Order : for
 
 Order "1" o-- "1..*" OrderLine : lines
 OrderLine "*" --> "1" Training : training
