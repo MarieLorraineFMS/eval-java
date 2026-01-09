@@ -1,46 +1,36 @@
-# Architecture – Plateforme MYSDF formations
-
-Ce document décrit l’architecture technique de l’application MYSDF formations.
-L’architecture est organisée en couches afin de séparer les responsabilités
-& de faciliter la maintenance, les tests et l’évolution de l’application.
-
----
-
-## 1. Vue d’ensemble
-
-L’application est structurée selon une **architecture en couches** :
-
-- Couche Présentation (UI / CLI)
-- Couche Application / Service
-- Couche Domaine (Modèle métier)
-- Couche Accès aux données (DAO)
-- Couche Infrastructure (configuration, base de données)
-
----
-
-## 2. Organisation
-
-```text
 fr.fms
-├── App.java
+├── App.java                       # Point d’entrée + menu principal
+│
+├── UiAuth.java                    # UI connexion / inscription
+├── UiCart.java                    # UI panier + checkout
+├── UiOrder.java                   # UI clients + commandes
+├── UiTraining.java                # UI catalogue formations
 │
 ├── config
-│   └── DbConfig.java
+│   └── DbConfig.java              # Chargement des properties + getConnection()
 │
 ├── service
-│   ├── TrainingService.java
-│   ├── AuthService.java
-│   ├── CartService.java
-│   └── OrderService.java
+│   ├── AuthService.java           # Authentification & inscription
+│   ├── CartService.java           # Logique panier
+│   ├── OrderService.java          # Checkout & commandes
+│   └── TrainingService.java       # Catalogue formations
 │
 ├── dao
 │   ├── TrainingDao.java
-│   ├── UserDao.java
+│   ├── UserAccountDao.java
 │   ├── ClientDao.java
 │   ├── CartDao.java
-│   ├── CartItemDao.java
 │   ├── OrderDao.java
-│   └── OrderLineDao.java
+│   │
+│   └── factory
+│       └── DaoFactory.java        # Fournit les DAO JDBC (singleton)
+│
+├── dao.jdbc
+│   ├── TrainingDaoJdbc.java
+│   ├── UserAccountDaoJdbc.java
+│   ├── ClientDaoJdbc.java
+│   ├── CartDaoJdbc.java
+│   └── OrderDaoJdbc.java
 │
 ├── model
 │   ├── Training.java
@@ -49,31 +39,17 @@ fr.fms
 │   ├── Cart.java
 │   ├── CartItem.java
 │   ├── Order.java
-│   └── OrderLine.java
+│   ├── OrderLine.java
+│   └── OrderStatus.java
 │
 ├── exception
 │   ├── AuthenticationException.java
 │   ├── CartEmptyException.java
 │   ├── TrainingNotFoundException.java
-│   └── OrderException.java
+│   ├── OrderException.java
+│   └── DaoException.java
 │
 └── utils
-    ├── AppLogger.java
-    └── Helpers.java
-```
-
-## 3. Ressources & livrables
-
-Les ressources non compilées sont stockées dans `src/main/resources` :
-
-```text
-src/main/resources
-├── uml
-│   ├── usecases.puml
-│   ├── classes.puml
-│   └── sequence_place_order.puml
-│
-├── architecture.md
-├── technicalSpecifications.md
-└── trainingPlatform.properties
-```
+    ├── Helpers.java               # Helpers UI, pagination, formatMoney, uiWarn/uiError
+    ├── AppLogger.java             # Logger console (mode verbose)
+    └── PasswordHasher.java        # Hash SHA-256 (comparaison en temps constant)
