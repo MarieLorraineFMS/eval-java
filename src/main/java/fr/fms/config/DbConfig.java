@@ -31,6 +31,7 @@ public class DbConfig {
         String env = System.getProperty("env", "platform");
         String filename = env + ".properties";
 
+        // Try with resources to close stream automatically
         try (var in = DbConfig.class.getClassLoader().getResourceAsStream(filename)) {
             if (in == null) {
                 throw new IllegalStateException(filename + " not found");
@@ -75,4 +76,17 @@ public class DbConfig {
         }
         return cnx;
     }
+
+    /**
+     * Indicates if verbose mode is enabled.
+     *
+     * Source:
+     * - app.verbose property from *.properties file
+     *
+     * @return true if verbose logs are enabled, false otherwise
+     */
+    public static boolean isVerboseEnabled() {
+        return Boolean.parseBoolean(PROPS.getProperty("app.verbose", "false"));
+    }
+
 }

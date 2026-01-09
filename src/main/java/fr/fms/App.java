@@ -1,5 +1,6 @@
 package fr.fms;
 
+import fr.fms.config.DbConfig;
 import fr.fms.dao.CartDao;
 import fr.fms.dao.ClientDao;
 import fr.fms.dao.OrderDao;
@@ -60,15 +61,7 @@ public class App {
         AuthService authService = new AuthService(userDao);
         OrderService orderService = new OrderService(orderDao, clientDao, cartDao, cartService);
 
-        // Enable verbose logs with "--verbose" or "-v"
-        boolean verbose = false;
-        for (String arg : args) {
-            if ("--verbose".equalsIgnoreCase(arg) || "-v".equalsIgnoreCase(arg)) {
-                verbose = true;
-                break;
-            }
-        }
-        AppLogger.setVerbose(verbose);
+        AppLogger.setVerbose(DbConfig.isVerboseEnabled());
 
         ////////////// CLI /////////////////////////
 

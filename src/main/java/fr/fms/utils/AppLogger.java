@@ -25,7 +25,7 @@ public final class AppLogger {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     /** Verbose mode flag. */
-    private static boolean verbose = Boolean.parseBoolean(System.getProperty("verbose", "false"));
+    private static boolean verbose = false;
 
     /**
      * Enables or disables verbose logging.

@@ -1,0 +1,22 @@
+﻿mvn exec:java
+mvn "-Dexec.mainClass=fr.fms.App" exec:java
+mvn -Dverbose=true "-Dexec.mainClass=fr.fms.App" exec:java
+
+kakashi.hatake987@protonmail.com
+jim.hopper641@yahoo.com
+monkey.luffy103@protonmail.com
+naruto.uzumaki283@gmail.com
+sylvanas.windrunner448@hotmail.com
+
+
+USE Shop;
+DESCRIBE T_Articles;
+SHOW TABLES;
+
+mysql -u root -p
+
+git ls-remote --heads origin
+
+git push origin --delete main
+
+
