@@ -14,6 +14,7 @@ import fr.fms.model.Client;
 import fr.fms.model.Order;
 import fr.fms.model.OrderLine;
 import fr.fms.model.OrderStatus;
+import fr.fms.utils.AppLogger;
 
 import static fr.fms.utils.Helpers.isNullOrEmpty;
 
@@ -73,6 +74,8 @@ public class OrderService {
      * @throws OrderException if checkout cannot be completed
      */
     public Order checkout(int userId, Client clientDraft) {
+        AppLogger.rocket("Checkout started for userId=" + userId);
+
         // Cart must exist & must not be empty
         Cart cart = cartService.requireNonEmptyCart(userId);
 
@@ -91,17 +94,26 @@ public class OrderService {
         // Total computed from cart snapshot
         BigDecimal total = cart.getTotal();
 
+        AppLogger.info("Checkout summary userId=" + userId
+                + " items=" + lines.size()
+                + " total=" + total);
+
         // Create order & lines in a single transaction
         Order order = new Order(userId, client, LocalDateTime.now(), OrderStatus.CONFIRMED, total);
         int orderId = orderDao.createOrderWithLines(order, lines);
 
         if (orderId <= 0) {
+            AppLogger.error("Checkout failed: cannot create order for userId=" + userId);
             throw new OrderException("Checkout failed: cannot create order.");
         }
+
+        AppLogger.ok("Order created successfully id=" + orderId + " userId=" + userId);
 
         // Clear cart after checkout
         int cartId = cartDao.getOrCreateCartId(userId);
         cartDao.clear(cartId);
+
+        AppLogger.ok("Cart cleared after checkout userId=" + userId + " cartId=" + cartId);
 
         // Return full order fo CLI
         Order created = new Order(orderId, userId, client, order.getCreatedAt(), order.getStatus(), total);
@@ -125,23 +137,34 @@ public class OrderService {
      */
     private Client getOrCreateClient(Client draft) {
         if (draft == null) {
+            AppLogger.info("Checkout failed: client draft is null");
             throw new OrderException("Client is required.");
         }
 
         // Minimal required fields
         if (isNullOrEmpty(draft.getFirstName()) || isNullOrEmpty(draft.getLastName())) {
+            AppLogger.info("Client validation failed: firstName/lastName missing");
             throw new OrderException("Client firstName/lastName required.");
         }
         if (isNullOrEmpty(draft.getEmail())) {
+            AppLogger.info("Client validation failed: email missing");
             throw new OrderException("Client email required.");
         }
 
         // Normalize email to keep db consistent
         String email = draft.getEmail().trim().toLowerCase();
 
+        AppLogger.info("Resolve client by email=" + email);
+
         // Nice move: if email already exists => reuse it instead of duplicating clients
         return clientDao.findByEmail(email)
+                .map(c -> {
+                    AppLogger.info("Client reused id=" + c.getId() + " email=" + email);
+                    return c;
+                })
                 .orElseGet(() -> {
+                    AppLogger.info("Client not found, creating new client for email=" + email);
+
                     int id = clientDao.create(new Client(
                             draft.getFirstName().trim(),
                             draft.getLastName().trim(),
@@ -150,8 +173,11 @@ public class OrderService {
                             draft.getPhone()));
 
                     if (id <= 0) {
+                        AppLogger.error("Cannot create client (DB error) email=" + email);
                         throw new OrderException("Cannot create client (DB error).");
                     }
+
+                    AppLogger.ok("Client created id=" + id + " email=" + email);
 
                     // Reload from DB to return the official stored version
                     return clientDao.findById(id)

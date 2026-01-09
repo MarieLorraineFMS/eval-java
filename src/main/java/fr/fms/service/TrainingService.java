@@ -7,6 +7,7 @@ import java.util.List;
 import fr.fms.dao.TrainingDao;
 import fr.fms.exception.TrainingNotFoundException;
 import fr.fms.model.Training;
+import fr.fms.utils.AppLogger;
 
 /**
  * Training service.
@@ -16,6 +17,8 @@ import fr.fms.model.Training;
  * - validate inputs coming from UI
  * - normalize search/filter behavior
  *
+ * Business layer only:
+ * no UI, no SQL, just rules + coordination with DAO.
  */
 public class TrainingService {
 
@@ -37,6 +40,7 @@ public class TrainingService {
      * @return list of all trainings
      */
     public List<Training> listAll() {
+        AppLogger.info("List all trainings");
         return trainingDao.findAll();
     }
 
@@ -56,11 +60,15 @@ public class TrainingService {
 
         // Empty keyword => show all trainings
         if (isNullOrEmpty(kw)) {
+            AppLogger.info("Search trainings with empty keyword → return all");
             return trainingDao.findAll();
         }
 
         // Normalize case for consistent search
-        return trainingDao.searchByKeyword(kw.toLowerCase());
+        String normalized = kw.toLowerCase();
+        AppLogger.info("Search trainings by keyword='" + normalized + "'");
+
+        return trainingDao.searchByKeyword(normalized);
     }
 
     /**
@@ -70,6 +78,7 @@ public class TrainingService {
      * @return list of trainings matching the filter
      */
     public List<Training> listByOnsite(boolean onsite) {
+        AppLogger.info("Filter trainings by onsite=" + onsite);
         return trainingDao.findByOnsite(onsite);
     }
 
@@ -83,11 +92,16 @@ public class TrainingService {
      */
     public Training getById(int trainingId) {
         if (trainingId <= 0) {
+            AppLogger.info("Invalid trainingId requested: " + trainingId);
             throw new IllegalArgumentException("Training id must be > 0.");
         }
 
+        AppLogger.info("Load training by id=" + trainingId);
+
         return trainingDao.findById(trainingId)
-                .orElseThrow(() -> new TrainingNotFoundException(
-                        "Training not found: id=" + trainingId));
+                .orElseThrow(() -> {
+                    AppLogger.info("Training not found id=" + trainingId);
+                    return new TrainingNotFoundException("Training not found: id=" + trainingId);
+                });
     }
 }
