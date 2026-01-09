@@ -16,6 +16,7 @@ class Training {
   +description: String
   +durationDays: int
   +price: BigDecimal
+  +onsite: boolean
 }
 
 class UserAccount {
@@ -35,26 +36,39 @@ class Client {
 
 class Cart {
   +id: int
-  +createdAt: DateTime
+  +userId: int
+  +createdAt: LocalDateTime
+  +items: List<CartItem>
+  +getTotal(): BigDecimal
 }
 
 class CartItem {
   +id: int
+  +cartId: int
+  +training: Training
   +quantity: int
   +unitPrice: BigDecimal
+  +getLineTotal(): BigDecimal
 }
 
 class Order {
   +id: int
-  +createdAt: DateTime
+  +userId: int
+  +client: Client
+  +createdAt: LocalDateTime
   +status: OrderStatus
   +total: BigDecimal
+  +lines: List<OrderLine>
+  +computeTotalFromLines(): BigDecimal
 }
 
 class OrderLine {
   +id: int
+  +orderId: int
+  +training: Training
   +quantity: int
   +unitPrice: BigDecimal
+  +getLineTotal(): BigDecimal
 }
 
 ' ====== Associations ======
@@ -76,7 +90,12 @@ OrderLine "*" --> "1" Training : training
 ' ====== Notes ======
 note right of UserAccount
 Création utilisateur :
-login + password.
+login + password hash.
+end note
+
+note right of Training
+Catalogue des formations :
+prix, durée, modalité (onsite).
 end note
 
 note right of Order
