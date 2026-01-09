@@ -8,17 +8,42 @@ import java.util.Scanner;
 
 import static fr.fms.utils.Helpers.*;
 
+/**
+ * CLI UI for the training catalog.
+ *
+ * Responsibilities:
+ * - list trainings (read-only catalog)
+ * - search trainings by keyword
+ * - filter trainings by onsite/remote
+ * - allow selecting a training id (used by UiCart)
+ *
+ * Like app store, without the ads
+ */
 public final class UiTraining {
+
+    /** Prevent instantiation. */
     private UiTraining() {
     }
 
     //////////////////////// CATALOG (READ ONLY) //////////////////////////////
 
+    /**
+     * Displays all trainings with pagination.
+     *
+     * @param trainingService training catalog service
+     * @param sc              scanner used to read user input
+     */
     public static void listAll(TrainingService trainingService, Scanner sc) {
         List<Training> list = trainingService.listAll();
         showCatalog(sc, "TOUTES LES FORMATIONS", list);
     }
 
+    /**
+     * Asks a keyword & displays matching trainings with pagination.
+     *
+     * @param trainingService training catalog service
+     * @param sc              scanner used to read user input
+     */
     public static void search(TrainingService trainingService, Scanner sc) {
         title("RECHERCHER UNE FORMATION");
 
@@ -29,6 +54,12 @@ public final class UiTraining {
         showCatalog(sc, "RÉSULTATS DE RECHERCHE", list);
     }
 
+    /**
+     * Asks for onsite/remote filter & displays filtered trainings with pagination
+     *
+     * @param trainingService training catalog service
+     * @param sc              scanner used to read user input
+     */
     public static void filter(TrainingService trainingService, Scanner sc) {
         title("FILTRER LES FORMATIONS");
 
@@ -37,6 +68,8 @@ public final class UiTraining {
         System.out.print("Choix : ");
         String c = sc.nextLine().trim();
 
+        // If user types something else than "1", it's considered as remote(CLI logic,
+        // no drama)
         boolean onsite = "1".equals(c);
 
         List<Training> list = trainingService.listByOnsite(onsite);
@@ -45,6 +78,14 @@ public final class UiTraining {
 
     ////////////////////////////// SELECTION ///////////////////////////////////
 
+    /**
+     * Selection flow used by other UI screens .
+     * Allows user to browse the catalog & pick a training id.
+     *
+     * @param trainingService training catalog service
+     * @param sc              scanner used to read user input
+     * @return selected training id, or null if user cancels
+     */
     public static Integer pickTrainingId(TrainingService trainingService, Scanner sc) {
         title("CHOISIR UNE FORMATION");
 
@@ -90,6 +131,7 @@ public final class UiTraining {
             return null;
         }
 
+        // Selection is allowed: user can type an ID to select a training
         return paginateWithSelection(
                 sc,
                 "CATALOGUE",
@@ -97,12 +139,18 @@ public final class UiTraining {
                 5,
                 UiTraining::printTrainingPage,
                 id -> list.stream().anyMatch(t -> t.getId() == id),
-                true // ⬅️ sélection AUTORISÉE ici
-        );
+                true);
     }
 
     /////////////////////////////// HELPERS ///////////////////////////////////
 
+    /**
+     * Displays a training list as a read-only catalog.
+     *
+     * @param sc    scanner used to read user input
+     * @param title title to display
+     * @param list  trainings to display
+     */
     private static void showCatalog(Scanner sc, String title, List<Training> list) {
         if (list.isEmpty()) {
             title(title);
@@ -110,6 +158,7 @@ public final class UiTraining {
             return;
         }
 
+        // Read-only pagination
         paginateWithSelection(
                 sc,
                 title,
@@ -120,12 +169,22 @@ public final class UiTraining {
                 false);
     }
 
+    /**
+     * Prints one page of trainings.
+     *
+     * @param page trainings on the current page
+     */
     private static void printTrainingPage(List<Training> page) {
         spacer();
         page.forEach(UiTraining::printTrainingCard);
         spacer();
     }
 
+    /**
+     * Prints a "card" display for one training.
+     *
+     * @param t training to display
+     */
     private static void printTrainingCard(Training t) {
         printlnColor(CYAN, "#" + t.getId() + " — " + t.getName());
 
@@ -135,8 +194,9 @@ public final class UiTraining {
 
         System.out.println(
                 "Durée : " + t.getDurationDays() + " jours"
-                        + " | Prix : " + String.format("%.2f", t.getPrice()) + " €");
+                        + " | Prix : " + formatMoney(t.getPrice()) + " €");
 
+        // Wrap long descriptions to keep the CLI readable
         printWrapped("Description : " + t.getDescription(), 90);
         spacer();
     }

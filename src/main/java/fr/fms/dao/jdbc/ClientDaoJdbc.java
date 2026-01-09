@@ -1,6 +1,7 @@
 package fr.fms.dao.jdbc;
 
 import java.sql.Statement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -10,8 +11,20 @@ import fr.fms.dao.ClientDao;
 import fr.fms.exception.DaoException;
 import fr.fms.model.Client;
 
+/**
+ * JDBC implementation of {@link ClientDao}.
+ *
+ * Handles all SQL operations related to Client persistence.
+ * Translates db rows into Client objects.
+ */
 public class ClientDaoJdbc implements ClientDao {
 
+    /**
+     * Retrieves all clients from db.
+     *
+     * @return list of all clients ordered by id
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public List<Client> findAll() {
         final String sql = "SELECT id, first_name, last_name, email, address, phone FROM client ORDER BY id";
@@ -30,6 +43,13 @@ public class ClientDaoJdbc implements ClientDao {
         }
     }
 
+    /**
+     * Finds a client by its identifier.
+     *
+     * @param id client identifier
+     * @return Optional containing the Client if found, otherwise Optional.empty()
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public Optional<Client> findById(int id) {
         final String sql = "SELECT id, first_name, last_name, email, address, phone FROM client WHERE id = ?";
@@ -49,6 +69,13 @@ public class ClientDaoJdbc implements ClientDao {
         }
     }
 
+    /**
+     * Finds a client by email address.
+     *
+     * @param email client email address
+     * @return Optional containing the Client if found, otherwise Optional.empty()
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public Optional<Client> findByEmail(String email) {
         final String sql = "SELECT id, first_name, last_name, email, address, phone FROM client WHERE email = ?";
@@ -68,6 +95,13 @@ public class ClientDaoJdbc implements ClientDao {
         }
     }
 
+    /**
+     * Creates a new client in db.
+     *
+     * @param client client to persist
+     * @return generated client identifier, or 0 if creation failed
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public int create(Client client) {
         final String sql = """
@@ -98,7 +132,16 @@ public class ClientDaoJdbc implements ClientDao {
         }
     }
 
-    private Client mapClient(java.sql.ResultSet rs) throws Exception {
+    /**
+     * Maps a ResultSet row to a Client object.
+     *
+     * Centralizes mapping logic to avoid duplication.
+     *
+     * @param rs SQL result set
+     * @return mapped Client object
+     * @throws Exception if a SQL access error occurs
+     */
+    private Client mapClient(ResultSet rs) throws Exception {
         int id = rs.getInt("id");
         String fn = rs.getString("first_name");
         String ln = rs.getString("last_name");

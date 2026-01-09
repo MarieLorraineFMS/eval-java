@@ -8,8 +8,26 @@ import fr.fms.dao.UserAccountDao;
 import fr.fms.exception.DaoException;
 import fr.fms.model.UserAccount;
 
+/**
+ * JDBC implementation of {@link UserAccountDao}.
+ *
+ * Handles persistence of authentication-related data:
+ * - user id
+ * - login
+ * - password hash
+ *
+ * No passwords in clear text. Ever.
+ */
 public class UserAccountDaoJdbc implements UserAccountDao {
 
+    /**
+     * Finds a user account by its identifier.
+     *
+     * @param id user account identifier
+     * @return Optional containing the UserAccount if found, otherwise
+     *         Optional.empty()
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public Optional<UserAccount> findById(int id) {
         final String sql = "SELECT id, login, password_hash FROM user_account WHERE id = ?";
@@ -29,6 +47,17 @@ public class UserAccountDaoJdbc implements UserAccountDao {
         }
     }
 
+    /**
+     * Finds a user account by login.
+     *
+     * Login is trimmed before query to avoid silly mistakes
+     *
+     *
+     * @param login user login
+     * @return Optional containing the UserAccount if found, otherwise
+     *         Optional.empty()
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public Optional<UserAccount> findByLogin(String login) {
         final String sql = "SELECT id, login, password_hash FROM user_account WHERE login = ?";
@@ -49,6 +78,14 @@ public class UserAccountDaoJdbc implements UserAccountDao {
         }
     }
 
+    /**
+     * Creates a new user account in db.
+     *
+     *
+     * @param user user account to persist
+     * @return generated user identifier, or 0 if creation failed
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public int create(UserAccount user) {
         final String sql = "INSERT INTO user_account(login, password_hash) VALUES(?, ?)";
@@ -73,6 +110,15 @@ public class UserAccountDaoJdbc implements UserAccountDao {
         }
     }
 
+    /**
+     * Maps a ResultSet row to a UserAccount object.
+     *
+     * Centralizing mapping avoids duplication & keeps things tidy.
+     *
+     * @param rs SQL result set
+     * @return mapped UserAccount object
+     * @throws Exception if a SQL access error occurs
+     */
     private UserAccount mapUser(java.sql.ResultSet rs) throws Exception {
         int id = rs.getInt("id");
         String login = rs.getString("login");

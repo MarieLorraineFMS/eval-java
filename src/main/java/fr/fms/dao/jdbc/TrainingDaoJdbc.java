@@ -13,8 +13,24 @@ import fr.fms.dao.TrainingDao;
 import fr.fms.exception.DaoException;
 import fr.fms.model.Training;
 
+/**
+ * JDBC implementation of {@link TrainingDao}.
+ *
+ * Handles SQL queries for the training catalog:
+ * - list all trainings
+ * - find by id
+ * - search by keyword
+ * - filter by onsite
+ *
+ */
 public class TrainingDaoJdbc implements TrainingDao {
 
+    /**
+     * Retrieves all trainings from db.
+     *
+     * @return list of all trainings ordered by id
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public List<Training> findAll() {
         final String sql = "SELECT id, name, description, duration_days, price, onsite FROM training ORDER BY id";
@@ -33,6 +49,13 @@ public class TrainingDaoJdbc implements TrainingDao {
         }
     }
 
+    /**
+     * Finds a training by its identifier.
+     *
+     * @param id training identifier
+     * @return Optional containing the Training if found, otherwise Optional.empty()
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public Optional<Training> findById(int id) {
         final String sql = "SELECT id, name, description, duration_days, price, onsite FROM training WHERE id = ?";
@@ -52,6 +75,18 @@ public class TrainingDaoJdbc implements TrainingDao {
         }
     }
 
+    /**
+     * Searches trainings by keyword in name & description.
+     *
+     * Implementation details:
+     * - keyword is normalized to lowercase
+     * - query uses LIKE with wildcards: %keyword%
+     * - search is case-insensitive
+     *
+     * @param keyword keyword to search
+     * @return list of trainings matching the keyword
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public List<Training> searchByKeyword(String keyword) {
         // Search in name & description
@@ -84,6 +119,13 @@ public class TrainingDaoJdbc implements TrainingDao {
         }
     }
 
+    /**
+     * Retrieves trainings filtered by onsite flag.
+     *
+     * @param onsite true for onsite trainings, false for remote trainings
+     * @return list of trainings matching the onsite filter
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public List<Training> findByOnsite(boolean onsite) {
         final String sql = """
@@ -111,6 +153,15 @@ public class TrainingDaoJdbc implements TrainingDao {
         }
     }
 
+    /**
+     * Maps a ResultSet row to a Training object.
+     *
+     * Centralizing mapping avoids duplicated field extraction everywhere.
+     *
+     * @param rs SQL result set
+     * @return mapped Training object
+     * @throws Exception if a SQL access error occurs
+     */
     private Training mapTraining(ResultSet rs) throws Exception {
         int id = rs.getInt("id");
         String name = rs.getString("name");

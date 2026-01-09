@@ -10,11 +10,30 @@ import java.util.Scanner;
 
 import static fr.fms.utils.Helpers.*;
 
+/**
+ * CLI UI for orders & clients.
+ *
+ * Responsibilities:
+ * - select or create a client
+ * - list orders for the current user
+ * - display order details & lines
+ *
+ * UI-only:
+ * it asks questions, prints tables, & calls OrderService.
+ */
 public final class UiOrder {
+
+    /** Prevent instantiation. */
     private UiOrder() {
     }
 
-    // Selecting existing client or creating new one
+    /**
+     * Asks the user to select an existing client or create a new one.
+     *
+     * @param sc           scanner used to read user input
+     * @param orderService service used to load/create clients
+     * @return selected/created Client, or null if the user cancels
+     */
     public static Client askClient(Scanner sc, OrderService orderService) {
         title("CLIENT");
 
@@ -37,7 +56,17 @@ public final class UiOrder {
         };
     }
 
-    // Existing client selection flow
+    /**
+     * Client selection flow:
+     * - search by name/email
+     * - show last 10 clients
+     * - pick client by id
+     * - show all clients with pagination
+     *
+     * @param sc           scanner used to read user input
+     * @param orderService service used to load clients
+     * @return selected Client, or null if user cancels or selection fails
+     */
     private static Client selectExistingClient(Scanner sc, OrderService orderService) {
         title("CHOISIR UN CLIENT");
 
@@ -59,6 +88,7 @@ public final class UiOrder {
                 System.out.print("Recherche : ");
                 String q = sc.nextLine().trim().toLowerCase();
 
+                // In-memory filtering (good enough for a CLI app)
                 candidates = orderService.listClients().stream()
                         .filter(cl -> (cl.getFirstName() + " " + cl.getLastName()).toLowerCase().contains(q)
                                 || cl.getEmail().toLowerCase().contains(q))
@@ -66,6 +96,7 @@ public final class UiOrder {
             }
 
             case "2" -> {
+                // "Last 10" by id desc
                 candidates = orderService.listClients().stream()
                         .sorted((a, b) -> Integer.compare(b.getId(), a.getId()))
                         .limit(10)
@@ -73,10 +104,12 @@ public final class UiOrder {
             }
 
             case "3" -> {
-                selectedId = askIdOrBack(sc, "Id client (0 pour retour) : ");
+                // Direct id input
+                selectedId = askIntOrBack(sc, "Id client (0 pour retour) : ");
             }
 
             case "4" -> {
+                // Full list with pagination & selection
                 List<Client> all = orderService.listClients();
 
                 selectedId = paginateWithSelection(
@@ -99,7 +132,7 @@ public final class UiOrder {
             }
         }
 
-        // Cases 1 & 2 : select or go back
+        // Cases 1 & 2: show candidates then ask for an id
         if (candidates != null) {
             if (candidates.isEmpty()) {
                 printlnColor(YELLOW, "Aucun client trouvé.");
@@ -107,20 +140,26 @@ public final class UiOrder {
             }
 
             printClientsTable(candidates);
-            selectedId = askIdOrBack(sc, "Id client (0 pour retour) : ");
+            selectedId = askIntOrBack(sc, "Id client (0 pour retour) : ");
         }
 
-        // Go back
+        // User chose "back"
         if (selectedId == null) {
             return null;
         }
 
+        // Load client by id
         return orderService.getClientById(selectedId).orElseGet(() -> {
             printlnColor(RED, "Client introuvable.");
             return null;
         });
     }
 
+    /**
+     * Prints a small client table (id / name / email).
+     *
+     * @param clients clients to display
+     */
     private static void printClientsTable(List<Client> clients) {
         spacer();
         printlnColor(CYAN, "ID  | Nom                    | Email");
@@ -134,7 +173,13 @@ public final class UiOrder {
         spacer();
     }
 
-    // Truncate for tables
+    /**
+     * Truncates a string for table display.
+     *
+     * @param s   input string
+     * @param max maximum length
+     * @return truncated string (with ellipsis) or empty string if null
+     */
     private static String truncate(String s, int max) {
         if (s == null)
             return "";
@@ -143,6 +188,12 @@ public final class UiOrder {
         return s.substring(0, Math.max(0, max - 1)) + "…";
     }
 
+    /**
+     * Asks user for client fields.
+     *
+     * @param sc scanner used to read user input
+     * @return Client draft object validated/created by OrderService
+     */
     private static Client askClientFields(Scanner sc) {
         title("NOUVEAU CLIENT");
 
@@ -161,9 +212,16 @@ public final class UiOrder {
         System.out.print("Téléphone : ");
         String phone = sc.nextLine();
 
+        // Draft client: OrderService validate & normalize it
         return new Client(fn, ln, email, addr, phone);
     }
 
+    /**
+     * Lists all orders for the given user.
+     *
+     * @param orderService order service
+     * @param userId       identifier of the user
+     */
     public static void listMyOrders(OrderService orderService, int userId) {
         title("MES COMMANDES");
 
@@ -176,6 +234,11 @@ public final class UiOrder {
         orders.forEach(UiOrder::printOrder);
     }
 
+    /**
+     * Prints one order (header + lines).
+     *
+     * @param o order to display
+     */
     private static void printOrder(Order o) {
         printlnColor(CYAN, "----------------------------------------");
         printlnColor(CYAN, "Commande n° " + o.getId());
@@ -192,16 +255,21 @@ public final class UiOrder {
         o.getLines().forEach(UiOrder::printOrderLine);
 
         spacer();
-        printlnColor(GREEN, "TOTAL COMMANDE : " + o.getTotal() + " €");
+        printlnColor(GREEN, "TOTAL COMMANDE : " + formatMoney(o.getTotal()) + " €");
         printlnColor(CYAN, "----------------------------------------");
         spacer();
     }
 
+    /**
+     * Prints one order line.
+     *
+     * @param line order line to display
+     */
     private static void printOrderLine(OrderLine line) {
         System.out.println(
                 " - " + line.getTraining().getName()
                         + " | Qté : " + line.getQuantity()
-                        + " | PU : " + String.format("%.2f", line.getUnitPrice()) + " €"
-                        + " | Ligne : " + String.format("%.2f", line.getLineTotal()) + " €");
+                        + " | PU : " + formatMoney(line.getUnitPrice()) + " €"
+                        + " | Ligne : " + formatMoney(line.getLineTotal()) + " €");
     }
 }

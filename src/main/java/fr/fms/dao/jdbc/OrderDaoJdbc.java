@@ -1,5 +1,7 @@
 package fr.fms.dao.jdbc;
 
+import static fr.fms.utils.Helpers.toLdt;
+
 import java.math.BigDecimal;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -17,8 +19,26 @@ import fr.fms.model.OrderLine;
 import fr.fms.model.OrderStatus;
 import fr.fms.model.Training;
 
+/**
+ * JDBC implementation of {@link OrderDao}.
+ *
+ * Handles:
+ * - inserting orders
+ * - reading orders
+ * - updating order status
+ *
+ * Note: name `order` is reserved in SQL, so backticks are required.
+ * SQL... always trying to be special
+ */
 public class OrderDaoJdbc implements OrderDao {
 
+    /**
+     * Creates an order header in db (no lines).
+     *
+     * @param order order header to persist
+     * @return generated order id, or 0 if creation failed
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public int create(Order order) {
         // Backticks mandatory : order is a reserved word
@@ -51,6 +71,15 @@ public class OrderDaoJdbc implements OrderDao {
         }
     }
 
+    /**
+     * Creates an order header & its lines in a single transaction.
+     * All-or-nothing: if anything fails, rollback is triggered.
+     *
+     * @param order order header to persist
+     * @param lines order lines to persist
+     * @return generated order id, or 0 if creation failed
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public int createOrderWithLines(Order order, List<OrderLine> lines) {
         // ONE transaction => header & lines => all or nothing
@@ -83,7 +112,7 @@ public class OrderDaoJdbc implements OrderDao {
                 try {
                     cnx.rollback();
                 } catch (Exception ignored) {
-                    // Nothing to do...!!!
+                    // At this point, we did our best
                 }
                 throw e;
             }
@@ -93,6 +122,15 @@ public class OrderDaoJdbc implements OrderDao {
         }
     }
 
+    /**
+     * Inserts the order header & returns the generated order id.
+     *
+     * @param cnx   open db connection
+     * @param sql   insert SQL for the order header
+     * @param order order header data
+     * @return generated order id, or 0 if insertion failed
+     * @throws Exception if a db error occurs
+     */
     private int insertOrderHeader(java.sql.Connection cnx, String sql, Order order) throws Exception {
         try (var ps = cnx.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, order.getUserId());
@@ -113,10 +151,19 @@ public class OrderDaoJdbc implements OrderDao {
         }
     }
 
+    /**
+     * Inserts order lines using a batch.
+     *
+     * @param cnx     open db connection
+     * @param sql     insert SQL for order lines
+     * @param orderId identifier of the created order
+     * @param lines   list of lines to insert
+     * @throws Exception if a db error occurs
+     */
     private void insertOrderLines(java.sql.Connection cnx, String sql, int orderId, List<OrderLine> lines)
             throws Exception {
 
-        // Batch is easier to keep clean with a simple loop (less lambda pain)
+        // Batch is easier to keep clean with a simple loop
         try (var ps = cnx.prepareStatement(sql)) {
             for (OrderLine line : lines) {
                 ps.setInt(1, orderId);
@@ -129,6 +176,15 @@ public class OrderDaoJdbc implements OrderDao {
         }
     }
 
+    /**
+     * Adds one order line to an existing order.
+     *
+     * @param orderId    identifier of the order
+     * @param trainingId identifier of the training
+     * @param quantity   quantity purchased
+     * @param unitPrice  unit price
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public void addLine(int orderId, int trainingId, int quantity, BigDecimal unitPrice) {
         final String sql = """
@@ -151,6 +207,16 @@ public class OrderDaoJdbc implements OrderDao {
         }
     }
 
+    /**
+     * Finds an order by id, including:
+     * - order header
+     * - client data
+     * - order lines
+     *
+     * @param orderId identifier of the order
+     * @return Optional containing the Order if found, otherwise Optional.empty()
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public Optional<Order> findById(int orderId) {
         final String sql = """
@@ -194,6 +260,16 @@ public class OrderDaoJdbc implements OrderDao {
         }
     }
 
+    /**
+     * Finds all orders for a given user id.
+     * Each order is returned with:
+     * - client data
+     * - order lines
+     *
+     * @param userId identifier of the user
+     * @return list of orders ordered
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public List<Order> findByUserId(int userId) {
         final String sql = """
@@ -239,6 +315,13 @@ public class OrderDaoJdbc implements OrderDao {
         }
     }
 
+    /**
+     * Maps the "order header + client columns" from ResultSet into an Order object.
+     *
+     * @param rs SQL result set
+     * @return mapped Order object
+     * @throws Exception if a SQL access error occurs
+     */
     private Order mapOrderHeader(java.sql.ResultSet rs) throws Exception {
         int orderId = rs.getInt("order_id");
         int userId = rs.getInt("user_id");
@@ -258,6 +341,15 @@ public class OrderDaoJdbc implements OrderDao {
         return new Order(orderId, userId, client, createdAt, status, total);
     }
 
+    /**
+     * Loads all lines for a given order id.
+     * It joins training to build full OrderLine objects.
+     *
+     * @param cnx     open db connection (
+     * @param orderId identifier of the order
+     * @return list of OrderLine for the order
+     * @throws Exception if a db error occurs
+     */
     private List<OrderLine> loadLines(java.sql.Connection cnx, int orderId) throws Exception {
         final String sql = """
                 SELECT
@@ -305,10 +397,14 @@ public class OrderDaoJdbc implements OrderDao {
         }
     }
 
-    private LocalDateTime toLdt(Timestamp ts) {
-        return ts == null ? null : ts.toLocalDateTime();
-    }
-
+    /**
+     * Updates status of an order.
+     *
+     * @param orderId identifier of the order
+     * @param status  new status
+     * @return true if an order was updated, false otherwise
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public boolean updateStatus(int orderId, OrderStatus status) {
         final String sql = "UPDATE `order` SET status = ? WHERE id = ?";

@@ -1,8 +1,9 @@
 package fr.fms.dao.jdbc;
 
+import static fr.fms.utils.Helpers.toLdt;
+
 import java.math.BigDecimal;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -14,8 +15,26 @@ import fr.fms.model.Cart;
 import fr.fms.model.CartItem;
 import fr.fms.model.Training;
 
+/**
+ * JDBC implementation of {@link CartDao}.
+ *
+ * Responsibilities:
+ * - Load a cart for a user (cart header + cart items)
+ * - Create cart if missing (get-or-create pattern)
+ * - Update cart items (add/increment, decrement/remove, delete line, clear)
+ *
+ */
 public class CartDaoJdbc implements CartDao {
 
+    /**
+     * Finds a cart for a given user id.
+     * If found, also loads cart items via a second query.
+     *
+     * @param userId identifier of the user
+     * @return an Optional containing the Cart if it exists, otherwise
+     *         Optional.empty()
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public Optional<Cart> findByUserId(int userId) {
         final String cartSql = "SELECT id, user_id, created_at FROM cart WHERE user_id = ?";
@@ -32,7 +51,7 @@ public class CartDaoJdbc implements CartDao {
                 int cartId = rs.getInt("id");
                 LocalDateTime createdAt = toLdt(rs.getTimestamp("created_at"));
 
-                // Load items in a separate query
+                // Load items in a separate query (because one query is never enough)
                 var items = loadItemsByCartId(cnx, cartId);
 
                 return Optional.of(new Cart(cartId, userId, createdAt, items));
@@ -43,6 +62,20 @@ public class CartDaoJdbc implements CartDao {
         }
     }
 
+    /**
+     * Returns an existing cart id for the user, or creates a cart & returns its
+     * id.
+     *
+     * Notes:
+     * - It tries SELECT first (cheap).
+     * - If not found, it tries INSERT.
+     * - If a concurrent insert happens, it re-selects ("race condition"
+     * defense).
+     *
+     * @param userId identifier of the user
+     * @return cart id, 0 if insert failed.
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public int getOrCreateCartId(int userId) {
         // Safe even if two calls happen at the same time
@@ -71,7 +104,7 @@ public class CartDaoJdbc implements CartDao {
                     return keys.getInt(1);
                 }
             } catch (Exception duplicateOrOther) {
-                // If it's a duplicate key re-select
+                // If it's a duplicate key, re-select and move on like nothing happened
                 Integer after = selectCartId(cnx, select, userId);
                 if (after != null) {
                     return after;
@@ -84,6 +117,15 @@ public class CartDaoJdbc implements CartDao {
         }
     }
 
+    /**
+     * Selects the cart id for a user.
+     *
+     * @param cnx       opened db connection
+     * @param selectSql SQL query used to select cart id by user id
+     * @param userId    identifier of the user
+     * @return cart id if found, otherwise null
+     * @throws Exception if a db error occurs
+     */
     private Integer selectCartId(java.sql.Connection cnx, String selectSql, int userId) throws Exception {
         try (var ps = cnx.prepareStatement(selectSql)) {
             ps.setInt(1, userId);
@@ -96,6 +138,19 @@ public class CartDaoJdbc implements CartDao {
         }
     }
 
+    /**
+     * Adds an item to the cart or increments quantity if the line already exists.
+     *
+     * Uses a db upsert:
+     * - INSERT if not present
+     * - UPDATE (quantity = quantity + delta) if already present
+     *
+     * @param cartId     identifier of the cart
+     * @param trainingId identifier of the training
+     * @param deltaQty   quantity to add
+     * @param unitPrice  unit price
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public void addOrIncrement(int cartId, int trainingId, int deltaQty, BigDecimal unitPrice) {
         final String upsert = """
@@ -121,6 +176,20 @@ public class CartDaoJdbc implements CartDao {
         }
     }
 
+    /**
+     * Decrements quantity for a cart line or deletes the line if quantity becomes<=
+     * 0.
+     *
+     * Transactional:
+     * - Step 1: UPDATE quantity
+     * - Step 2: DELETE if quantity <= 0
+     *
+     * @param cartId     identifier of the cart
+     * @param trainingId identifier of the training
+     * @param deltaQty   quantity to remove (must be positive, we subtract it)
+     * @return true if the line existed & was updated, false if no update
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public boolean decrementOrRemove(int cartId, int trainingId, int deltaQty) {
         // Step 1: decrement
@@ -148,11 +217,13 @@ public class CartDaoJdbc implements CartDao {
                     updated = ps.executeUpdate();
                 }
 
+                // If nothing was updated, the item probably does not exist
                 if (updated == 0) {
                     cnx.rollback();
                     return false;
                 }
 
+                // Cleanup: remove line if quantity is now <= 0
                 try (var ps = cnx.prepareStatement(del)) {
                     ps.setInt(1, cartId);
                     ps.setInt(2, trainingId);
@@ -166,6 +237,7 @@ public class CartDaoJdbc implements CartDao {
                 try {
                     cnx.rollback();
                 } catch (Exception ignored) {
+                    // If rollback fails, we are already in trouble territory
                 }
                 throw e;
             }
@@ -175,6 +247,14 @@ public class CartDaoJdbc implements CartDao {
         }
     }
 
+    /**
+     * Removes an entire line from the cart.
+     *
+     * @param cartId     identifier of the cart
+     * @param trainingId identifier of the training
+     * @return true if a row was deleted, false if the line did not exist
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public boolean removeLine(int cartId, int trainingId) {
         final String sql = "DELETE FROM cart_item WHERE cart_id = ? AND training_id = ?";
@@ -191,6 +271,12 @@ public class CartDaoJdbc implements CartDao {
         }
     }
 
+    /**
+     * Clears all items for a given cart.
+     *
+     * @param cartId identifier of the cart
+     * @throws DaoException if a db error occurs
+     */
     @Override
     public void clear(int cartId) {
         final String sql = "DELETE FROM cart_item WHERE cart_id = ?";
@@ -205,6 +291,16 @@ public class CartDaoJdbc implements CartDao {
         }
     }
 
+    /**
+     * Loads all cart items for a given cart id.
+     *
+     * It joins training to build full CartItem objects.
+     *
+     * @param cnx    open db connection
+     * @param cartId identifier of the cart
+     * @return list of CartItem for the cart
+     * @throws Exception if a db error occurs
+     */
     private ArrayList<CartItem> loadItemsByCartId(java.sql.Connection cnx, int cartId) throws Exception {
         final String sql = """
                 SELECT
@@ -230,6 +326,7 @@ public class CartDaoJdbc implements CartDao {
             try (var rs = ps.executeQuery()) {
                 ArrayList<CartItem> items = new ArrayList<>();
                 while (rs.next()) {
+                    // Build Training object
                     Training t = new Training(
                             rs.getInt("training_id"),
                             rs.getString("name"),
@@ -238,6 +335,7 @@ public class CartDaoJdbc implements CartDao {
                             rs.getBigDecimal("price"),
                             rs.getBoolean("onsite"));
 
+                    // Build CartItem object
                     CartItem item = new CartItem(
                             rs.getInt("cart_item_id"),
                             rs.getInt("cart_id"),
@@ -252,7 +350,4 @@ public class CartDaoJdbc implements CartDao {
         }
     }
 
-    private LocalDateTime toLdt(Timestamp ts) {
-        return ts == null ? null : ts.toLocalDateTime();
-    }
 }
