@@ -7,6 +7,7 @@ import fr.fms.config.DbConfig;
 import fr.fms.dao.UserAccountDao;
 import fr.fms.exception.DaoException;
 import fr.fms.model.UserAccount;
+import fr.fms.utils.AppLogger;
 
 /**
  * JDBC implementation of {@link UserAccountDao}.
@@ -91,6 +92,7 @@ public class UserAccountDaoJdbc implements UserAccountDao {
         final String sql = "INSERT INTO user_account(login, password_hash) VALUES(?, ?)";
         try (var cnx = DbConfig.getConnection();
                 var ps = cnx.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            AppLogger.info("Create user for userId=" + user.getId());
 
             ps.setString(1, user.getLogin());
             ps.setString(2, user.getPasswordHash());
