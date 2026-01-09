@@ -8,6 +8,7 @@ import fr.fms.exception.CartEmptyException;
 import fr.fms.exception.TrainingNotFoundException;
 import fr.fms.model.Cart;
 import fr.fms.model.Training;
+import fr.fms.utils.AppLogger;
 
 /**
  * Cart service.
@@ -51,14 +52,19 @@ public class CartService {
      */
     public Cart getOrCreateCart(int userId) {
         int cartId = cartDao.getOrCreateCartId(userId);
+        AppLogger.info("Load cart for userId=" + userId);
+
         if (cartId <= 0) {
+            AppLogger.error("Cannot getOrCreateCartId for userId=" + userId);
             throw new IllegalStateException("Une erreur est survenue lors de la création du panier.");
         }
 
         // Reload full cart (header & lines) to return an up-to-date snapshot
         return cartDao.findByUserId(userId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Une erreur est survenue lors de la récupération du panier."));
+                .orElseThrow(() -> {
+                    AppLogger.error("Cart not found after getOrCreateCartId for userId=" + userId);
+                    return new IllegalStateException("Une erreur est survenue lors de la récupération du panier.");
+                });
     }
 
     /**
@@ -76,7 +82,10 @@ public class CartService {
      * @throws IllegalStateException    if cart creation/retrieval fails
      */
     public Cart addTraining(int userId, int trainingId, int quantity) {
+        AppLogger.info("Add training to cart userId=" + userId + " trainingId=" + trainingId + " qty=" + quantity);
+
         if (quantity <= 0) {
+            AppLogger.info("Add training failed: invalid quantity=" + quantity);
             throw new IllegalArgumentException("La quantité doit être supérieure à 0.");
         }
 
@@ -86,15 +95,19 @@ public class CartService {
 
         int cartId = cartDao.getOrCreateCartId(userId);
         if (cartId <= 0) {
+            AppLogger.error("Cannot getOrCreateCartId for addTraining userId=" + userId);
             throw new IllegalStateException("Impossible de créer ou récupérer le panier.");
         }
 
         cartDao.addOrIncrement(cartId, trainingId, quantity, unitPrice);
+        AppLogger.ok("Training added to cart userId=" + userId + " trainingId=" + trainingId);
 
         // Reload cart to return the latest persisted state
         return cartDao.findByUserId(userId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Une erreur est survenue lors de la récupération du panier."));
+                .orElseThrow(() -> {
+                    AppLogger.error("Cart reload failed after addTraining userId=" + userId);
+                    return new IllegalStateException("Une erreur est survenue lors de la récupération du panier.");
+                });
     }
 
     /**
@@ -110,23 +123,31 @@ public class CartService {
      * @throws IllegalStateException     if cart creation/retrieval fails
      */
     public Cart decrementTraining(int userId, int trainingId, int delta) {
+        AppLogger.info("Decrement training in cart userId=" + userId + " trainingId=" + trainingId + " delta=" + delta);
+
         if (delta <= 0) {
+            AppLogger.info("Decrement failed: invalid delta=" + delta);
             throw new IllegalArgumentException("Le delta doit être supérieur à 0.");
         }
 
         int cartId = cartDao.getOrCreateCartId(userId);
         if (cartId <= 0) {
+            AppLogger.error("Cannot getOrCreateCartId for decrementTraining userId=" + userId);
             throw new IllegalStateException("Impossible de créer ou récupérer le panier.");
         }
 
         boolean ok = cartDao.decrementOrRemove(cartId, trainingId, delta);
         if (!ok) {
+            AppLogger.info(
+                    "Decrement failed: training not found in cart userId=" + userId + " trainingId=" + trainingId);
             throw new TrainingNotFoundException("Formation introuvable : id=" + trainingId);
         }
-
+        AppLogger.ok("Training decremented in cart userId=" + userId + " trainingId=" + trainingId);
         return cartDao.findByUserId(userId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Une erreur est survenue lors de la récupération du panier."));
+                .orElseThrow(() -> {
+                    AppLogger.error("Cart reload failed after decrementTraining userId=" + userId);
+                    return new IllegalStateException("Une erreur est survenue lors de la récupération du panier.");
+                });
     }
 
     /**
@@ -140,18 +161,25 @@ public class CartService {
      */
     public Cart removeTraining(int userId, int trainingId) {
         int cartId = cartDao.getOrCreateCartId(userId);
+        AppLogger.info("Remove training from cart userId=" + userId + " trainingId=" + trainingId);
+
         if (cartId <= 0) {
+            AppLogger.error("Cannot getOrCreateCartId for removeTraining userId=" + userId);
             throw new IllegalStateException("Impossible de créer ou récupérer le panier.");
         }
 
         boolean ok = cartDao.removeLine(cartId, trainingId);
         if (!ok) {
+            AppLogger.info("Remove failed: training not found in cart userId=" + userId + " trainingId=" + trainingId);
             throw new TrainingNotFoundException("Formation introuvable : id=" + trainingId);
         }
+        AppLogger.ok("Training removed from cart userId=" + userId + " trainingId=" + trainingId);
 
         return cartDao.findByUserId(userId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Une erreur est survenue lors de la récupération du panier."));
+                .orElseThrow(() -> {
+                    AppLogger.error("Cart reload failed after removeTraining userId=" + userId);
+                    return new IllegalStateException("Une erreur est survenue lors de la récupération du panier.");
+                });
     }
 
     /**
@@ -162,16 +190,23 @@ public class CartService {
      * @throws IllegalStateException if cart creation/retrieval fails
      */
     public Cart clear(int userId) {
+        AppLogger.info("Clear cart for userId=" + userId);
+
         int cartId = cartDao.getOrCreateCartId(userId);
         if (cartId <= 0) {
+            AppLogger.error("Cannot getOrCreateCartId for clear userId=" + userId);
+
             throw new IllegalStateException("Impossible de créer ou récupérer le panier.");
         }
 
         cartDao.clear(cartId);
+        AppLogger.ok("Cart cleared for userId=" + userId);
 
         return cartDao.findByUserId(userId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Une erreur est survenue lors de la récupération du panier."));
+                .orElseThrow(() -> {
+                    AppLogger.error("Cart reload failed after clear userId=" + userId);
+                    return new IllegalStateException("Une erreur est survenue lors de la récupération du panier.");
+                });
     }
 
     /**
@@ -213,6 +248,7 @@ public class CartService {
      */
     public void assertNotEmpty(Cart cart) {
         if (cart == null || cart.getItems().isEmpty()) {
+            AppLogger.info("Cart is empty (validation failed)");
             throw new CartEmptyException("Le panier est vide.");
         }
     }
