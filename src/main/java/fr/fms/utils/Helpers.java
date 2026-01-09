@@ -21,6 +21,10 @@ import java.util.function.IntPredicate;
  */
 public class Helpers {
 
+    /** Prevent instantiation. */
+    private Helpers() {
+    }
+
     // ///////////////////////////
     // SLEEP / UX
     // ///////////////////////////
