@@ -3,6 +3,7 @@ package fr.fms.service;
 import fr.fms.dao.UserAccountDao;
 import fr.fms.exception.AuthenticationException;
 import fr.fms.model.UserAccount;
+import fr.fms.utils.AppLogger;
 import fr.fms.utils.PasswordHasher;
 
 import static fr.fms.utils.Helpers.isNullOrEmpty;
@@ -50,8 +51,11 @@ public class AuthService {
      *                                 match
      */
     public UserAccount login(String login, String password) {
+        AppLogger.info("Login attempt for login=" + login);
+
         // Validation: no login, no party
         if (isNullOrEmpty(login) || isNullOrEmpty(password)) {
+            AppLogger.info("Login failed: empty credentials");
             throw new AuthenticationException("Identifiant/mot de passe obligatoires.");
         }
 
@@ -67,8 +71,16 @@ public class AuthService {
                     byte[] a = inputHash.getBytes(StandardCharsets.UTF_8);
                     byte[] b = u.getPasswordHash().getBytes(StandardCharsets.UTF_8);
                     return MessageDigest.isEqual(a, b);
+                }).map(u -> {
+                    // Successful
+                    AppLogger.ok("Login success for login=" + cleanLogin);
+                    return u;
                 })
-                .orElseThrow(() -> new AuthenticationException("Identifiant ou mot de passe invalide."));
+                .orElseThrow(() -> {
+                    // Failed
+                    AppLogger.info("Login failed: invalid credentials for login=" + cleanLogin);
+                    return new AuthenticationException("Identifiant ou mot de passe invalide.");
+                });
 
     }
 
@@ -89,8 +101,10 @@ public class AuthService {
      *                                 persistence fails
      */
     public UserAccount register(String login, String password) {
+        AppLogger.info("Registration attempt for login=" + login);
         // Validation: empty credentials are not a personality trait
         if (isNullOrEmpty(login) || isNullOrEmpty(password)) {
+            AppLogger.info("Registration failed: empty credentials");
             throw new AuthenticationException("Identifiant/mot de passe obligatoires.");
         }
 
@@ -106,12 +120,18 @@ public class AuthService {
 
         int id = userDao.create(new UserAccount(cleanLogin, pwdHash));
         if (id <= 0) {
+            AppLogger.error("Registration failed: DB insert error for login=" + cleanLogin);
             throw new AuthenticationException("Une erreur est survenue lors de la création de l'utilisateur.");
         }
 
         // Reload user from DB to return the official stored version
-        return userDao.findById(id)
+        UserAccount user = userDao.findById(id)
                 .orElseThrow(() -> new AuthenticationException(
                         "Une erreur est survenue lors de la récupération de l'utilisateur."));
+
+        // successful
+        AppLogger.ok("User registered successfully: login=" + cleanLogin + ", id=" + id);
+
+        return user;
     }
 }
