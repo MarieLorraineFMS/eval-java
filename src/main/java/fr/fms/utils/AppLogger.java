@@ -24,12 +24,33 @@ public final class AppLogger {
     /** Time format for log prefix. */
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
 
+    /** Verbose mode flag. */
+    private static boolean verbose = Boolean.parseBoolean(System.getProperty("verbose", "false"));
+
+    /**
+     * Enables or disables verbose logging.
+     *
+     * @param enabled true to enable verbose logs, false to disable
+     */
+    public static void setVerbose(boolean enabled) {
+        verbose = enabled;
+    }
+
+    /**
+     * @return true if verbose logs are enabled
+     */
+    public static boolean isVerbose() {
+        return verbose;
+    }
+
     /**
      * Prints an INFO message to stdout.
      *
      * @param msg message to log
      */
     public static void info(String msg) {
+        if (!verbose)
+            return;
         System.out.println(
                 "[" + LocalTime.now().format(FMT) + "] " + Helpers.CYAN + "INFO " + Helpers.RESET + " : " + msg);
     }
@@ -50,6 +71,8 @@ public final class AppLogger {
      * @param msg message to log
      */
     public static void rocket(String msg) {
+        if (!verbose)
+            return;
         info("🚀 " + msg);
     }
 
@@ -59,6 +82,8 @@ public final class AppLogger {
      * @param msg message to log
      */
     public static void ok(String msg) {
+        if (!verbose)
+            return;
         System.out.println(
                 "[" + LocalTime.now().format(FMT) + "] " + Helpers.GREEN + "✅" + Helpers.RESET + " : " + msg);
     }

@@ -60,6 +60,16 @@ public class App {
         AuthService authService = new AuthService(userDao);
         OrderService orderService = new OrderService(orderDao, clientDao, cartDao, cartService);
 
+        // Enable verbose logs with "--verbose" or "-v"
+        boolean verbose = false;
+        for (String arg : args) {
+            if ("--verbose".equalsIgnoreCase(arg) || "-v".equalsIgnoreCase(arg)) {
+                verbose = true;
+                break;
+            }
+        }
+        AppLogger.setVerbose(verbose);
+
         ////////////// CLI /////////////////////////
 
         // Try-with-resources ensures Scanner is properly closed
