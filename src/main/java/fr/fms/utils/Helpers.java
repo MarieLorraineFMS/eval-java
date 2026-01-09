@@ -333,4 +333,39 @@ public class Helpers {
         return String.format("%.2f", safe);
     }
 
+    // ///////////////////////////
+    // UI ERRORS/WARNINGS/INFO
+    // ///////////////////////////
+
+    /**
+     * Prints user-friendly error message.
+     *
+     * @param context short context label
+     * @param message error message
+     */
+    public static void uiError(String context, String message) {
+        // Error prefix for CLI
+        printlnColor(RED, "[" + context + "] " + message);
+    }
+
+    /**
+     * Prints user-friendly warning message.
+     *
+     * @param context short context label
+     * @param message warning message
+     */
+    public static void uiWarn(String context, String message) {
+        printlnColor(YELLOW, "[" + context + "] " + message);
+    }
+
+    /**
+     * Prints user-friendly info message.
+     *
+     * @param context short context label
+     * @param message info message
+     */
+    public static void uiInfo(String context, String message) {
+        printlnColor(CYAN, "[" + context + "] " + message);
+    }
+
 }

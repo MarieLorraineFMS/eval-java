@@ -50,7 +50,7 @@ public final class UiOrder {
             case "2" -> orderService.createOrReuseClient(askClientFields(sc));
             case "0" -> null;
             default -> {
-                printlnColor(YELLOW, "Choix invalide.");
+                uiWarn("Commande", "Choix invalide.");
                 yield null;
             }
         };
@@ -127,7 +127,7 @@ public final class UiOrder {
             }
 
             default -> {
-                printlnColor(YELLOW, "Choix invalide.");
+                uiWarn("Commande", "Choix invalide.");
                 return null;
             }
         }
@@ -135,7 +135,7 @@ public final class UiOrder {
         // Cases 1 & 2: show candidates then ask for an id
         if (candidates != null) {
             if (candidates.isEmpty()) {
-                printlnColor(YELLOW, "Aucun client trouvé.");
+                uiWarn("Commande", "Aucun client trouvé.");
                 return null;
             }
 
@@ -150,7 +150,7 @@ public final class UiOrder {
 
         // Load client by id
         return orderService.getClientById(selectedId).orElseGet(() -> {
-            printlnColor(RED, "Client introuvable.");
+            uiError("Commande", "Client introuvable.");
             return null;
         });
     }
@@ -227,7 +227,7 @@ public final class UiOrder {
 
         List<Order> orders = orderService.listByUserId(userId);
         if (orders.isEmpty()) {
-            printlnColor(YELLOW, "Aucune commande pour le moment.");
+            uiWarn("Commande", "Aucune commande pour le moment.");
             return;
         }
 
@@ -251,7 +251,7 @@ public final class UiOrder {
         System.out.println("Statut      : " + o.getStatus());
         spacer();
 
-        printlnColor(YELLOW, "Détails :");
+        uiInfo("Commande", "Détails :");
         o.getLines().forEach(UiOrder::printOrderLine);
 
         spacer();

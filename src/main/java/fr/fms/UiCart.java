@@ -1,7 +1,6 @@
 package fr.fms;
 
 import fr.fms.exception.CartEmptyException;
-import fr.fms.exception.DaoException;
 import fr.fms.exception.OrderException;
 import fr.fms.exception.TrainingNotFoundException;
 import fr.fms.model.Cart;
@@ -52,7 +51,7 @@ public final class UiCart {
             UserAccount currentUser) {
 
         if (currentUser == null) {
-            printlnColor(YELLOW, "Connexion nécessaire.");
+            uiWarn("Panier", "Connexion nécessaire.");
             return;
         }
 
@@ -60,70 +59,30 @@ public final class UiCart {
         while (running) {
             title("PANIER");
 
-            // Always reload the cart to show the latest persisted state
             Cart cart = cartService.getOrCreateCart(currentUser.getId());
             printCart(cart);
 
-            if (cart.getItems().isEmpty()) {
-                // Empty cart => only useful actions
-                System.out.println("1) Ajouter une formation");
-                System.out.println("0) Retour");
-                spacer();
-
-                System.out.print("Choix : ");
-                String choice = sc.nextLine().trim();
-
-                try {
-                    switch (choice) {
-                        case "1" -> handleAddTraining(cartService, trainingService, sc, currentUser);
-                        case "0" -> running = false;
-                        default -> printlnColor(YELLOW, "Choix inconnu.");
-                    }
-                } catch (TrainingNotFoundException e) {
-                    printlnColor(RED, e.getMessage());
-                } catch (IllegalArgumentException | IllegalStateException e) {
-                    // User input / app state errors
-                    printlnColor(RED, e.getMessage());
-                } catch (DaoException e) {
-                    // DB problem: show clean message & do not crash the CLI loop
-                    printlnColor(RED, "Database error: " + e.getMessage());
-                }
-
-                pause(250);
-                continue;
-            }
-
-            // Non-empty cart => full menu
-            System.out.println("1) Ajouter une formation");
-            System.out.println("2) Modifier / retirer une formation");
-            System.out.println("3) Vider le panier");
-            System.out.println("4) Valider / Commander");
-            System.out.println("0) Retour");
-            spacer();
+            boolean isEmpty = cart.getItems().isEmpty();
+            printCartMenu(isEmpty);
 
             System.out.print("Choix : ");
             String choice = sc.nextLine().trim();
 
             try {
-                switch (choice) {
-                    case "1" -> handleAddTraining(cartService, trainingService, sc, currentUser);
-                    case "2" -> handleEditOrRemoveItem(cartService, sc, currentUser);
-                    case "3" -> handleClearCart(cartService, sc, currentUser);
-                    case "4" -> handleCheckout(cartService, orderService, sc, currentUser);
-                    case "0" -> running = false;
-                    default -> printlnColor(YELLOW, "Choix inconnu.");
-                }
-            } catch (TrainingNotFoundException e) {
-                printlnColor(RED, e.getMessage());
-            } catch (CartEmptyException | OrderException e) {
-                // Business errors
-                printlnColor(RED, e.getMessage());
-            } catch (IllegalArgumentException | IllegalStateException e) {
-                // User input / app state errors
-                printlnColor(RED, e.getMessage());
-            } catch (fr.fms.exception.DaoException e) {
-                // Db errors should not kill UI
-                printlnColor(RED, "Database error: " + e.getMessage());
+                running = handleCartChoice(
+                        choice,
+                        isEmpty,
+                        cartService,
+                        trainingService,
+                        orderService,
+                        sc,
+                        currentUser);
+            } catch (TrainingNotFoundException
+                    | CartEmptyException
+                    | OrderException
+                    | IllegalArgumentException
+                    | IllegalStateException e) {
+                uiError("Panier", e.getMessage());
             }
 
             pause(250);
@@ -137,7 +96,7 @@ public final class UiCart {
      */
     private static void printCart(Cart cart) {
         if (cart.getItems().isEmpty()) {
-            printlnColor(YELLOW, "Panier vide.");
+            uiWarn("Panier", "Panier vide.");
             return;
         }
 
@@ -200,7 +159,7 @@ public final class UiCart {
         Cart cart = cartService.getOrCreateCart(currentUser.getId());
 
         if (cart.getItems().isEmpty()) {
-            printlnColor(YELLOW, "Panier vide.");
+            uiWarn("Panier", "Panier vide.");
             return;
         }
 
@@ -243,12 +202,12 @@ public final class UiCart {
                     return;
 
                 if (toRemove <= 0) {
-                    printlnColor(YELLOW, "Rien retiré.");
+                    uiWarn("Panier", "Aucun retrait.");
                     return;
                 }
 
                 if (toRemove > qty) {
-                    printlnColor(YELLOW, "Impossible de retirer plus de " + qty + ".");
+                    uiWarn("Panier", "Impossible de retirer plus de " + qty + ".");
                     return;
                 }
 
@@ -315,7 +274,7 @@ public final class UiCart {
 
         Cart cart = cartService.getOrCreateCart(currentUser.getId());
         if (cart.getItems().isEmpty()) {
-            printlnColor(YELLOW, "Le panier est vide.");
+            uiWarn("Panier", "Le panier est vide.");
             return;
         }
 
@@ -327,8 +286,8 @@ public final class UiCart {
             return;
 
         Order order = orderService.checkout(currentUser.getId(), client);
-        printlnColor(GREEN, "Commande créée ✅ id=" + order.getId() + " total=" + order.getTotal() + "€");
-        printlnColor(YELLOW, "Le panier a été vidé.");
+        printlnColor(GREEN, "Commande créée ✅ id=" + order.getId() + " total=" + formatMoney(order.getTotal()) + "€");
+        uiWarn("Panier", "Le panier a été vidé.");
     }
 
     /**
@@ -358,10 +317,80 @@ public final class UiCart {
                 .findFirst();
 
         if (item.isEmpty()) {
-            printlnColor(YELLOW, "Formation non trouvée.");
+            uiWarn("Panier", "Formation non trouvée.");
             return null;
         }
 
         return item.get();
     }
+
+    /**
+     * Prints the cart menu depending on cart state.
+     *
+     * @param isEmpty true if cart is empty, false otherwise
+     */
+    private static void printCartMenu(boolean isEmpty) {
+        if (isEmpty) {
+            System.out.println("1) Ajouter une formation");
+            System.out.println("0) Retour");
+            spacer();
+            return;
+        }
+
+        System.out.println("1) Ajouter une formation");
+        System.out.println("2) Modifier / retirer une formation");
+        System.out.println("3) Vider le panier");
+        System.out.println("4) Valider / Commander");
+        System.out.println("0) Retour");
+        spacer();
+    }
+
+    /**
+     * Handles one user choice from the cart menu.
+     *
+     * @param choice          user input choice
+     * @param isEmpty         true if cart is empty, false otherwise
+     * @param cartService     cart service
+     * @param trainingService training service
+     * @param orderService    order service
+     * @param sc              scanner
+     * @param currentUser     current logged-in user
+     * @return true if the menu should keep running, false to exit
+     */
+    private static boolean handleCartChoice(
+            String choice,
+            boolean isEmpty,
+            CartService cartService,
+            TrainingService trainingService,
+            OrderService orderService,
+            Scanner sc,
+            UserAccount currentUser) {
+
+        // "0" always means back
+        if ("0".equals(choice)) {
+            return false;
+        }
+
+        if (isEmpty) {
+            // Only one action makes sense when cart is empty
+            if ("1".equals(choice)) {
+                handleAddTraining(cartService, trainingService, sc, currentUser);
+            } else {
+                uiWarn("Panier", "Choix inconnu.");
+            }
+            return true;
+        }
+
+        // Full menu when cart has items
+        switch (choice) {
+            case "1" -> handleAddTraining(cartService, trainingService, sc, currentUser);
+            case "2" -> handleEditOrRemoveItem(cartService, sc, currentUser);
+            case "3" -> handleClearCart(cartService, sc, currentUser);
+            case "4" -> handleCheckout(cartService, orderService, sc, currentUser);
+            default -> uiWarn("Panier", "Choix inconnu.");
+        }
+
+        return true;
+    }
+
 }

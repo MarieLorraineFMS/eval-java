@@ -68,8 +68,7 @@ public final class UiTraining {
         System.out.print("Choix : ");
         String c = sc.nextLine().trim();
 
-        // If user types something else than "1", it's considered as remote(CLI logic,
-        // no drama)
+        // If user types something else than "1", consider it as remote(not a drama)
         boolean onsite = "1".equals(c);
 
         List<Training> list = trainingService.listByOnsite(onsite);
@@ -121,13 +120,13 @@ public final class UiTraining {
             }
 
             default -> {
-                printlnColor(YELLOW, "Choix invalide.");
+                uiWarn("Formation", "Choix invalide.");
                 return null;
             }
         }
 
         if (list.isEmpty()) {
-            printlnColor(YELLOW, "Aucune formation trouvée.");
+            uiWarn("Formation", "Aucune formation trouvée.");
             return null;
         }
 
@@ -154,7 +153,7 @@ public final class UiTraining {
     private static void showCatalog(Scanner sc, String title, List<Training> list) {
         if (list.isEmpty()) {
             title(title);
-            printlnColor(YELLOW, "Aucune formation trouvée.");
+            uiWarn("Formation", "Aucune formation trouvée.");
             return;
         }
 

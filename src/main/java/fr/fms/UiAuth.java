@@ -19,6 +19,9 @@ import static fr.fms.utils.Helpers.*;
  * It does NOT contain business logic AuthService is the brain.
  */
 public final class UiAuth {
+    /** Prevent instantiation. */
+    private UiAuth() {
+    }
 
     /**
      * Prompts the user for credentials & attempts to log in.
@@ -44,7 +47,7 @@ public final class UiAuth {
             return user;
         } catch (AuthenticationException e) {
             // Friendly error message
-            printlnColor(RED, e.getMessage());
+            uiError("Connexion", e.getMessage());
             return null;
         }
     }
@@ -70,7 +73,7 @@ public final class UiAuth {
             printlnColor(GREEN, "Compte créé ✅ " + user.getLogin());
             return user;
         } catch (AuthenticationException e) {
-            printlnColor(RED, e.getMessage());
+            uiError("Inscription", e.getMessage());
             return null;
         }
     }
